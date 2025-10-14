@@ -7,9 +7,10 @@
   <meta name="theme-color" content="#7c3aed" />
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </head>
 <body>
-  <header class="site-header">
+  <header class="site-header anim-bg">
     <div class="nav">
       <a href="{{ url_for('index') }}" class="brand">
         <img src="{{ url_for('static', filename='logo.svg') }}" alt="PlanPals" class="logo" />

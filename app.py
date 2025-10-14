@@ -140,17 +140,20 @@ def create_app():
             title = request.form["title"].strip()
             date_str = request.form["date"]
             desc = request.form["description"].strip()
-            capacity_raw = request.form.get("capacity", "").strip()
-            checklist_raw = request.form.get("checklist", "").strip()
 
-            cap = None
-            if capacity_raw:
-                try:
-                    cap_i = int(capacity_raw)
-                    cap = max(0, cap_i)
-                except ValueError:
-                    flash("Capacity must be a number.", "error")
-                    return render_template("create.html")
+            capacity_raw = request.form.get("capacity", "").strip()
+            if not capacity_raw:
+                flash("Capacity is required.", "error")
+                return render_template("create.html")
+            try:
+                cap = int(capacity_raw)
+                if cap < 1:
+                    raise ValueError
+            except ValueError:
+                flash("Capacity must be a number ≥ 1.", "error")
+                return render_template("create.html")
+
+            checklist_raw = request.form.get("checklist", "").strip()
 
             try:
                 dt = datetime.strptime(date_str, "%Y-%m-%d").date()

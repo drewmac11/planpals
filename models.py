@@ -15,7 +15,7 @@ class Event(db.Model):
     date = db.Column(db.Date, nullable=False, index=True)
     description = db.Column(db.Text, default='')
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    capacity = db.Column(db.Integer)  # optional max attendees
+    capacity = db.Column(db.Integer)  # required by UI; validated server-side >=1
     checklist = db.Column(db.Text, default='')  # newline-separated items
 
     def rsvp_counts(self):
