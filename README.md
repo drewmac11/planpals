@@ -1,2 +1,0 @@
-# planpals
-Repo for planpals

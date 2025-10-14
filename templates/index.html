@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>Upcoming Events</h1>
-{% for e in events %}
-<div class='card'>
-  <h3>{{ e.title }}</h3>
-  <p>{{ e.date.strftime('%b %d, %Y') }}</p>
-  <p>{{ e.description }}</p>
-</div>
-{% else %}
-<p>No events yet.</p>
-{% endfor %}
+  <h1>Upcoming Events</h1>
+  {% for e in events %}
+    <div class="card">
+      <h3>{{ e.title }}</h3>
+      <p><strong>Date:</strong> {{ e.date.strftime('%b %d, %Y') }}</p>
+      <p>{{ e.description }}</p>
+    </div>
+  {% else %}
+    <p>No events yet. <a href="{{ url_for('create_event') }}">Create one</a>!</p>
+  {% endfor %}
 {% endblock %}

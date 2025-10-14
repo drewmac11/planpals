@@ -1,26 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>PlanPals</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PlanPals</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<nav>
-  <a href="{{ url_for('index') }}">Home</a>
-  {% if current_user.is_authenticated %}
-    <a href="{{ url_for('create_event') }}">Create Event</a>
-    <a href="{{ url_for('logout') }}">Logout</a>
-  {% else %}
-    <a href="{{ url_for('login') }}">Login</a>
-    <a href="{{ url_for('register') }}">Sign Up</a>
-  {% endif %}
-</nav>
-<div class="container">
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% for cat, msg in messages %}<p class="flash {{cat}}">{{ msg }}</p>{% endfor %}
-{% endwith %}
-{% block content %}{% endblock %}
-</div>
-<footer>PlanPals — So all friends can attend!</footer>
+  <nav class="nav">
+    <a href="{{ url_for('index') }}" class="brand">PlanPals</a>
+    <div class="links">
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('create_event') }}">Create Event</a>
+        <a href="{{ url_for('logout') }}">Logout</a>
+      {% else %}
+        <a href="{{ url_for('login') }}">Login</a>
+        <a href="{{ url_for('register') }}">Sign Up</a>
+      {% endif %}
+    </div>
+  </nav>
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}<div class="flash {{cat}}">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer>PlanPals — So all friends can attend!</footer>
 </body>
 </html>

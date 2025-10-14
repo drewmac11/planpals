@@ -1,12 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import login_user, login_required, logout_user, current_user
 from datetime import datetime
 import os
 
-db = SQLAlchemy()
-login_manager = LoginManager()
+from extensions import db, login_manager
+from models import User, Event
 
 def create_app():
     app = Flask(__name__)
@@ -18,14 +17,12 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'login'
 
-    with app.app_context():
-        db.create_all()
-
-    from models import User, Event
-
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
+
+    with app.app_context():
+        db.create_all()
 
     @app.route('/')
     def index():
@@ -35,8 +32,8 @@ def create_app():
     @app.route('/register', methods=['GET','POST'])
     def register():
         if request.method == 'POST':
-            name = request.form['name']
-            email = request.form['email']
+            name = request.form['name'].strip()
+            email = request.form['email'].strip().lower()
             password = request.form['password']
             if User.query.filter_by(email=email).first():
                 flash('Email already registered', 'error')
@@ -44,14 +41,14 @@ def create_app():
                 user = User(name=name, email=email, password_hash=generate_password_hash(password))
                 db.session.add(user)
                 db.session.commit()
-                flash('Registration successful!', 'success')
+                flash('Registration successful! Please log in.', 'success')
                 return redirect(url_for('login'))
         return render_template('register.html')
 
     @app.route('/login', methods=['GET','POST'])
     def login():
         if request.method == 'POST':
-            email = request.form['email']
+            email = request.form['email'].strip().lower()
             password = request.form['password']
             user = User.query.filter_by(email=email).first()
             if user and check_password_hash(user.password_hash, password):
@@ -70,10 +67,14 @@ def create_app():
     @login_required
     def create_event():
         if request.method == 'POST':
-            title = request.form['title']
+            title = request.form['title'].strip()
             date_str = request.form['date']
-            desc = request.form['description']
-            dt = datetime.strptime(date_str, '%Y-%m-%d').date()
+            desc = request.form['description'].strip()
+            try:
+                dt = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash('Invalid date format', 'error')
+                return render_template('create.html')
             e = Event(title=title, date=dt, description=desc, creator_id=current_user.id)
             db.session.add(e)
             db.session.commit()
@@ -85,5 +86,5 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
