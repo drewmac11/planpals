@@ -1,3 +1,4 @@
+from datetime import time, timedelta
 from __future__ import annotations
 import datetime as dt
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -51,7 +52,6 @@ class Event(db.Model):
     else:
         dt_end = dt_start
     return dt_start, dt_end
-        return dt_start, datetime.combine(self.date, self.leave_by_time)
 
 class RSVP(db.Model):
     __table_args__ = (UniqueConstraint("event_id","user_id", name="uq_event_user"),)
