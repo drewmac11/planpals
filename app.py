@@ -305,11 +305,20 @@ def create_app():
             return redirect(url_for("event_detail", event_id=e.id))
         return render_template("create.html", defaults=DEFAULT_CHECKLIST)
 
-    @app.route("/profile")
-    @login_required
-    def profile():
-        rows = Event.query.filter_by(creator_id=current_user.id).order_by(Event.date.asc()).all()
-        return render_template("profile.html", events=rows)
+    @app.route("/profile", methods=["GET","POST"])
+@login_required
+def profile():
+    if request.method == "POST":
+        new_name = request.form.get("name","").strip()
+        if new_name:
+            current_user.name = new_name
+            db.session.commit()
+            flash("Name updated.", "success")
+        else:
+            flash("Name cannot be empty.", "error")
+        return redirect(url_for("profile"))
+    rows = Event.query.filter_by(creator_id=current_user.id).order_by(Event.date.asc()).all()
+    return render_template("profile.html", events=rows)
 
     @app.route("/event/<int:event_id>/delete", methods=["POST"])
     @login_required

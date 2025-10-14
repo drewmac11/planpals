@@ -10,7 +10,7 @@
 </head>
 <body>
 <header class="header">
-  <canvas id="particles"></canvas>
+  <canvas id="mousefx"></canvas>
   <nav class="nav wrap">
     <a href="{{ url_for('index') }}" class="brand">
       <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="PlanPals">
@@ -27,13 +27,15 @@
       <a href="{{ url_for('register') }}" class="btn">Sign up</a>
     {% endif %}
   </nav>
-  <div class="hero wrap">
-    <h1>PlanPals</h1>
-    <p>So all friends can attend!</p>
+
+  <div class="hero wrap center">
+    <img src="{{ url_for('static', filename='logo.png') }}" class="hero-logo" alt="PlanPals logo">
+    <h1 class="hero-title">PlanPals</h1>
+    <p class="hero-tag">So all friends can attend!</p>
     {% if current_user.is_authenticated %}
-      <a class="btn large" href="{{ url_for('create_event') }}">+ Create an event</a>
+      <a class="btn large hero-cta" href="{{ url_for('create_event') }}">+ Create an event</a>
     {% else %}
-      <a class="btn large" href="{{ url_for('register') }}">Get started</a>
+      <a class="btn large hero-cta" href="{{ url_for('register') }}">Get started</a>
     {% endif %}
   </div>
 </header>

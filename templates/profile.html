@@ -1,6 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
 <section class="section">
+  <div class="profile-head card soft">
+    <form method="post" action="{{ url_for('profile') }}" class="form inline">
+      <label>Your name
+        <input name="name" value="{{ current_user.name }}" required>
+      </label>
+      <button class="btn small">Save</button>
+    </form>
+  </div>
+
   <h2>Your events</h2>
   {% if events %}
     <table class="table">
@@ -8,7 +17,7 @@
       <tbody>
       {% for e in events %}
         <tr>
-          <td>{{ e.date.strftime('%Y-%m-%d') }}</td>
+          <td>{{ e.date.strftime('%Y-%m-%d') if e.date else 'TBA' }}</td>
           <td><a href="{{ url_for('event_detail', event_id=e.id) }}">{{ e.title }}</a></td>
           <td class="right">
             <a class="btn small ghost" href="{{ url_for('edit_event', event_id=e.id) }}">Edit</a>
