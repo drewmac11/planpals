@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h1">Edit event</h1>
+<form method="post" class="form">
+  <div class="grid2">
+    <label> Title
+      <input type="text" name="title" required value="{{ ev.title }}">
+    </label>
+    <label> Date
+      <input type="date" name="date" required value="{{ ev.date.strftime('%Y-%m-%d') }}">
+    </label>
+  </div>
+  <div class="grid2">
+    <label> Doors open (time)
+      <input type="time" name="doors_open_time" value="{{ ev.doors_open_time and ev.doors_open_time.strftime('%H:%M') or '' }}">
+    </label>
+    <label> Leave by (time)
+      <input type="time" name="leave_by_time" value="{{ ev.leave_by_time and ev.leave_by_time.strftime('%H:%M') or '' }}">
+    </label>
+  </div>
+  <label class="row vcenter gap">
+    <input type="checkbox" name="no_end" value="1" {% if ev.no_specified_end_time %}checked{% endif %}>
+    <span>No specified end time</span>
+  </label>
+  <label> Description
+    <textarea name="description" rows="3">{{ ev.description }}</textarea>
+  </label>
+  <div class="grid2">
+    <label> Capacity
+      <input type="number" name="capacity" min="0" required value="{{ ev.capacity }}">
+    </label>
+    <label class="row vcenter gap">
+      <input type="checkbox" name="dry" value="1" {% if ev.dry %}checked{% endif %}>
+      <span>Dry event</span>
+    </label>
+  </div>
+
+  <h2>Things to bring</h2>
+  <div class="checkgrid">
+    {% for item in defaults %}
+      <label class="checkline">
+        <input type="checkbox" name="bring[]" value="{{ item }}" {% if item in existing %}checked{% endif %}>
+        <span>{{ item }}</span>
+      </label>
+    {% endfor %}
+  </div>
+  <label> Other (comma-separated)
+    <input type="text" name="bring_other" placeholder="extra items">
+  </label>
+
+  <button class="btn" type="submit">Save</button>
+</form>
+{% endblock %}
