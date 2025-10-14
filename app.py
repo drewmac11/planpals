@@ -3,13 +3,22 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
 from datetime import datetime
 from sqlalchemy import text
+from urllib.parse import urlparse
 import os
 
 from extensions import db, login_manager
 from models import User, Event
 
 def normalize_db_url(raw: str) -> str:
-    # Map any of these to psycopg v3
+    raw = (raw or "").strip().strip('"').strip("'")
+
+    # Fix common mistakes
+    if raw.startswith("railwaypostgres://"):
+        raw = raw.replace("railwaypostgres://", "postgres://", 1)
+    if raw.startswith("railwaypostgresql://"):
+        raw = raw.replace("railwaypostgresql://", "postgresql://", 1)
+
+    # Force psycopg3 driver
     if raw.startswith("postgresql+psycopg2://"):
         raw = raw.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
     if raw.startswith("postgres://"):
@@ -17,11 +26,12 @@ def normalize_db_url(raw: str) -> str:
     if raw.startswith("postgresql://"):
         raw = raw.replace("postgresql://", "postgresql+psycopg://", 1)
 
-    # Ensure SSL unless explicitly set
+    # Add SSL only for public hosts
     if raw.startswith("postgresql+psycopg://") and "sslmode=" not in raw:
-        raw += ("&" if "?" in raw else "?") + "sslmode=require"
+        host = urlparse(raw).hostname or ""
+        if not host.endswith(".railway.internal"):
+            raw += ("&" if "?" in raw else "?") + "sslmode=require"
     return raw
-
 
 def create_app():
     app = Flask(__name__)
@@ -39,6 +49,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
+        # Simple for now; SQLAlchemy 2.x warns about Query.get but fine
         return User.query.get(int(user_id))
 
     with app.app_context():
