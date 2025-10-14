@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="section narrow">
-  <h2>Create an account</h2>
+<section class="section">
+  <h2>Create account</h2>
   <form method="post" class="form">
-    <label>Name<input name="name" placeholder="John Doe" required></label>
-    <label>Email<input name="email" type="email" required></label>
-    <label>Password<input name="password" type="password" required></label>
-    <button class="btn">Sign up</button>
+    <label>Name<input type="text" name="name" placeholder="John Doe" required></label>
+    <label>Email<input type="email" name="email" required></label>
+    <label>Password<input type="password" name="password" required></label>
+    <button class="btn">Create account</button>
   </form>
 </section>
 {% endblock %}

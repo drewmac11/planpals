@@ -1,64 +1,51 @@
 {% extends 'base.html' %}
 {% block content %}
-<article class="card detail">
-  <div class="head">
-    <div class="date-badge lg">
-      <span class="m">{{ e.date.strftime('%b') if e.date else 'TBA' }}</span>
-      <span class="d">{{ e.date.strftime('%d') if e.date else '—' }}</span>
-    </div>
-    <div>
-      <h2>{{ e.title }}</h2>
-      <p class="muted">
-        {{ e.date.strftime('%A, %B %d, %Y') if e.date else 'Date TBA' }}
-        •
-        {% if e.start_time %}{{ e.start_time.strftime('%H:%M') }}{% else %}Time TBA{% endif %}
-        {% if e.end_time %}–{{ e.end_time.strftime('%H:%M') }}{% elif e.start_time %} • No end time{% endif %}
-        {% if e.dry %} • <span class="pill" title="Dry: no alcohol/weed permitted">Dry</span>{% endif %}
-      </p>
-    </div>
-  </div>
+<section class="section">
+  <h2>{{ e.title }}</h2>
+  <p class="muted small">
+    {{ e.date.strftime('%A, %B %d, %Y') if e.date else 'Date TBA' }} •
+    {% if e.start_time %}{{ e.start_time.strftime('%H:%M') }}{% else %}Time TBA{% endif %}
+    {% if e.end_time %} → {{ e.end_time.strftime('%H:%M') }}{% endif %}
+    {% if not e.end_time and e.start_time %} • No specified end time{% endif %}
+    {% if e.dry %} • Dry{% endif %}
+    {% if e.capacity %} • Max: {{ e.capacity }}{% endif %}
+  </p>
+  <p>{{ e.description }}</p>
 
-  {% if e.description %}<p class="mt">{{ e.description }}</p>{% endif %}
-
-  <div class="stats">
-    <span><strong>{{ yes }}</strong> going{% if e.capacity %} / {{ e.capacity }} max{% endif %}</span>
-    <span><strong>{{ maybe }}</strong> maybe</span>
-    <span><strong>{{ no }}</strong> not going</span>
-    {% if e.capacity and yes >= e.capacity %}<span class="full">Event is full</span>{% endif %}
-  </div>
-
-  {% if current_user.is_authenticated %}
-    <div class="rsvp-row">
-      <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='yes') }}"><button class="btn{% if my == 'yes' %} active{% endif %}">I'm going</button></form>
-      <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='maybe') }}"><button class="btn ghost{% if my == 'maybe' %} active{% endif %}">Maybe</button></form>
-      <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='no') }}"><button class="btn ghost{% if my == 'no' %} active{% endif %}">Can't go</button></form>
-    </div>
-  {% else %}
-    <p class="muted small">Please <a href="{{ url_for('login') }}">log in</a> to RSVP.</p>
-  {% endif %}
-
+  <h3>Checklist</h3>
   {% if items %}
-    <div class="checklist">
-      <div class="checklist-head">
-        <h3>What to bring</h3>
-        {% if e.dry %}<span class="pill">Dry</span>{% endif %}
-      </div>
-      <ul class="checklist-items">
-        {% for it in items %}
-          <li>
-            <form method="post" action="{{ url_for('toggle_item', event_id=e.id, item_id=it.id) }}">
-              <label class="tick">
-                <input type="checkbox" {% if it.checked %}checked{% endif %} {% if current_user.is_anonymous or current_user.id != e.creator_id %}disabled{% endif %} onChange="this.form.submit()">
-                <span class="{% if it.checked %}done{% endif %}">{{ it.label }}</span>
-              </label>
-            </form>
-          </li>
-        {% endfor %}
-      </ul>
-      {% if current_user.is_authenticated and current_user.id != e.creator_id %}
-        <p class="muted small">Only the organizer can tick items.</p>
-      {% endif %}
-    </div>
+    <ul>
+    {% for it in items %}
+      <li>
+        <form method="post" action="{{ url_for('toggle_item', event_id=e.id, item_id=it.id) }}" style="display:inline">
+          {% if current_user.is_authenticated and current_user.id == e.creator_id %}
+            <button class="btn small">{{ '✓' if it.checked else '○' }}</button>
+          {% else %}
+            <span class="pill">{{ '✓' if it.checked else '○' }}</span>
+          {% endif %}
+        </form>
+        {{ it.label }}
+      </li>
+    {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">No items yet.</p>
   {% endif %}
-</article>
+
+  <h3>RSVP</h3>
+  <p>Going: {{ yes }} • Maybe: {{ maybe }} • No: {{ no }}</p>
+  {% if current_user.is_authenticated %}
+    <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='yes') }}" style="display:inline"><button class="btn small">Yes</button></form>
+    <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='maybe') }}" style="display:inline"><button class="btn small">Maybe</button></form>
+    <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='no') }}" style="display:inline"><button class="btn small">No</button></form>
+    {% if current_user.id == e.creator_id %}
+      <a class="btn ghost" href="{{ url_for('edit_event', event_id=e.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('delete_event', event_id=e.id) }}" style="display:inline" onsubmit="return confirm('Delete this event?')">
+        <button class="btn danger small">Delete</button>
+      </form>
+    {% endif %}
+  {% else %}
+    <p class="muted small">Sign in to RSVP.</p>
+  {% endif %}
+</section>
 {% endblock %}
