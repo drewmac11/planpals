@@ -7,20 +7,26 @@ from urllib.parse import urlparse
 import os
 
 from extensions import db, login_manager
-from models import User, Event, RSVP
+from models import User, Event
 
 def normalize_db_url(raw: str) -> str:
     raw = (raw or "").strip().strip('"').strip("'")
+
+    # Fix common mistakes
     if raw.startswith("railwaypostgres://"):
         raw = raw.replace("railwaypostgres://", "postgres://", 1)
     if raw.startswith("railwaypostgresql://"):
         raw = raw.replace("railwaypostgresql://", "postgresql://", 1)
+
+    # Force psycopg3 driver
     if raw.startswith("postgresql+psycopg2://"):
         raw = raw.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
     if raw.startswith("postgres://"):
         raw = raw.replace("postgres://", "postgresql+psycopg://", 1)
     if raw.startswith("postgresql://"):
         raw = raw.replace("postgresql://", "postgresql+psycopg://", 1)
+
+    # Add SSL only for public hosts
     if raw.startswith("postgresql+psycopg://") and "sslmode=" not in raw:
         host = urlparse(raw).hostname or ""
         if not host.endswith(".railway.internal"):
@@ -29,6 +35,7 @@ def normalize_db_url(raw: str) -> str:
 
 def create_app():
     app = Flask(__name__)
+
     env_url = os.environ.get("DATABASE_URL", "sqlite:///planpals.db")
     db_url = normalize_db_url(env_url)
 
@@ -42,6 +49,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
+        # Simple for now; SQLAlchemy 2.x warns about Query.get but fine
         return User.query.get(int(user_id))
 
     with app.app_context():
@@ -66,38 +74,6 @@ def create_app():
     def index():
         events = Event.query.order_by(Event.date.asc()).all()
         return render_template("index.html", events=events)
-
-    @app.route("/event/<int:event_id>")
-    def event_detail(event_id):
-        e = Event.query.get_or_404(event_id)
-        yes, maybe, no = e.rsvp_counts()
-        items = [line.strip() for line in (e.checklist or '').splitlines() if line.strip()]
-        my = None
-        if current_user.is_authenticated:
-            r = RSVP.query.filter_by(event_id=event_id, user_id=current_user.id).first()
-            my = r.status if r else None
-        return render_template("event.html", e=e, yes=yes, maybe=maybe, no=no, items=items, my=my)
-
-    @app.route("/event/<int:event_id>/rsvp/<status>", methods=["POST"])
-    @login_required
-    def rsvp(event_id, status):
-        status = status.lower()
-        if status not in ("yes", "no", "maybe"):
-            flash("Invalid RSVP.", "error")
-            return redirect(url_for("event_detail", event_id=event_id))
-        e = Event.query.get_or_404(event_id)
-        if status == "yes" and e.is_full():
-            flash("Sorry, this event is full.", "error")
-            return redirect(url_for("event_detail", event_id=event_id))
-        rec = RSVP.query.filter_by(event_id=event_id, user_id=current_user.id).first()
-        if rec:
-            rec.status = status
-        else:
-            rec = RSVP(event_id=event_id, user_id=current_user.id, status=status)
-            db.session.add(rec)
-        db.session.commit()
-        flash("RSVP updated.", "success")
-        return redirect(url_for("event_detail", event_id=event_id))
 
     @app.route("/register", methods=["GET", "POST"])
     def register():
@@ -140,33 +116,16 @@ def create_app():
             title = request.form["title"].strip()
             date_str = request.form["date"]
             desc = request.form["description"].strip()
-
-            capacity_raw = request.form.get("capacity", "").strip()
-            if not capacity_raw:
-                flash("Capacity is required.", "error")
-                return render_template("create.html")
-            try:
-                cap = int(capacity_raw)
-                if cap < 1:
-                    raise ValueError
-            except ValueError:
-                flash("Capacity must be a number ≥ 1.", "error")
-                return render_template("create.html")
-
-            checklist_raw = request.form.get("checklist", "").strip()
-
             try:
                 dt = datetime.strptime(date_str, "%Y-%m-%d").date()
             except ValueError:
                 flash("Invalid date format", "error")
                 return render_template("create.html")
-
-            e = Event(title=title, date=dt, description=desc, creator_id=current_user.id,
-                      capacity=cap, checklist=checklist_raw)
+            e = Event(title=title, date=dt, description=desc, creator_id=current_user.id)
             db.session.add(e)
             db.session.commit()
             flash("Event created!", "success")
-            return redirect(url_for("event_detail", event_id=e.id))
+            return redirect(url_for("index"))
         return render_template("create.html")
 
     return app

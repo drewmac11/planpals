@@ -11,20 +11,15 @@
     {% if events %}
       <div class="grid">
         {% for e in events %}
-          {% set yes, maybe, no = e.rsvp_counts() %}
           <article class="card event">
             <div class="date-badge">
               <span class="m">{{ e.date.strftime('%b') }}</span>
               <span class="d">{{ e.date.strftime('%d') }}</span>
             </div>
             <div class="card-body">
-              <h3><a class="title-link" href="{{ url_for('event_detail', event_id=e.id) }}">{{ e.title }}</a></h3>
+              <h3>{{ e.title }}</h3>
               <p class="muted">{{ e.date.strftime('%A, %B %d, %Y') }}</p>
               {% if e.description %}<p>{{ e.description }}</p>{% endif %}
-              <div class="muted small">
-                <strong>{{ yes }}</strong> going{% if e.capacity %} / {{ e.capacity }} max{% endif %}
-                • <strong>{{ maybe }}</strong> maybe
-              </div>
             </div>
           </article>
         {% endfor %}
