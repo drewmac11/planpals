@@ -17,9 +17,12 @@ def normalize_db_url(raw_url: str) -> str:
 def _bootstrap_migrations(app):
     """Create any new columns/tables if they don't exist (Postgres/SQLite safe)."""
     from extensions import db
-    eng = db.engine
-    insp = inspect(eng)
-
+    from sqlalchemy import text, inspect
+    with app.app_context():
+    """Create any new columns/tables if they don't exist (Postgres/SQLite safe)."""
+        from extensions import db
+        eng = db.engine
+        insp = inspect(eng)
 def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static')
     app.secret_key = os.environ.get("SECRET_KEY","dev-secret")
