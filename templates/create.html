@@ -1,53 +1,27 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% block content %}
-<h1 class="h1">Create event</h1>
-<form method="post" class="form">
-  <div class="grid2">
-    <label> Title
-      <input type="text" name="title" required>
-    </label>
-    <label> Date
-      <input type="date" name="date" required>
-    </label>
-  </div>
-  <div class="grid2">
-    <label> Doors open (time)
-      <input type="time" name="doors_open_time">
-    </label>
-    <label> Leave by (time)
-      <input type="time" name="leave_by_time">
-    </label>
-  </div>
-  <label class="row vcenter gap">
-    <input type="checkbox" name="no_end" value="1">
-    <span>No specified end time</span>
-  </label>
-  <label> Description
-    <textarea name="description" rows="3" placeholder="What's the plan?"></textarea>
-  </label>
-  <div class="grid2">
-    <label> Capacity
-      <input type="number" name="capacity" min="0" required value="0">
-    </label>
-    <label class="row vcenter gap">
-      <input type="checkbox" name="dry" value="1">
-      <span>Dry event <span class="muted" title="No alcohol/weed">ⓘ</span></span>
-    </label>
-  </div>
-
-  <h2>Things to bring</h2>
-  <div class="checkgrid">
-    {% for item in defaults %}
-      <label class="checkline">
-        <input type="checkbox" name="bring[]" value="{{ item }}">
-        <span>{{ item }}</span>
-      </label>
-    {% endfor %}
-  </div>
-  <label> Other (comma-separated)
-    <input type="text" name="bring_other" placeholder="e.g., hotdogs, ketchup">
-  </label>
-
-  <button class="btn" type="submit">Create</button>
-</form>
+<section class="auth">
+  <h2>Create an event</h2>
+  <form method="post" class="form">
+    <label>Title</label>
+    <input name="title" placeholder="Board game night" required />
+    <div class="row">
+      <div class="col">
+        <label>Date</label>
+        <input name="date" type="date" required />
+      </div>
+      <div class="col">
+        <label>Max attendees</label>
+        <input name="capacity" type="number" min="1" step="1" required placeholder="e.g. 8" />
+      </div>
+    </div>
+    <label>Description <span class="muted small">(optional)</span></label>
+    <textarea name="description" rows="4" placeholder="Snacks at 7, games at 7:30."></textarea>
+    <label>Checklist <span class="muted small">(one per line)</span></label>
+    <textarea name="checklist" rows="4" placeholder="Bring your own snacks
+Chairs if you have them
+Deck of cards"></textarea>
+    <button class="btn wide">Create event</button>
+  </form>
+</section>
 {% endblock %}

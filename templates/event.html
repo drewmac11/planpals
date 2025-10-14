@@ -1,73 +1,51 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% block content %}
-<div class="row between vcenter">
-  <h1 class="h1">{{ ev.title }}</h1>
-  {% if current_user.is_authenticated and ev.creator_id == current_user.id %}
-    <div class="row gap">
-      <a class="btn ghost" href="{{ url_for('edit_event', event_id=ev.id) }}">Edit</a>
-      <form method="post" action="{{ url_for('delete_event', event_id=ev.id) }}" onsubmit="return confirm('Delete this event?')">
-        <button class="btn danger" type="submit">Delete</button>
-      </form>
+<section class="section">
+  <article class="card event-detail">
+    <div class="event-header">
+      <div class="date-badge lg">
+        <span class="m">{{ e.date.strftime('%b') }}</span>
+        <span class="d">{{ e.date.strftime('%d') }}</span>
+      </div>
+      <div>
+        <h2>{{ e.title }}</h2>
+        <p class="muted">{{ e.date.strftime('%A, %B %d, %Y') }}</p>
+      </div>
     </div>
-  {% endif %}
-</div>
 
-<p class="muted">{{ ev.date.strftime("%A, %b %d, %Y") }}{% if ev.doors_open_time %} @ {{ ev.doors_open_time.strftime("%H:%M") }}{% endif %}{% if not ev.no_specified_end_time and ev.leave_by_time %} – {{ ev.leave_by_time.strftime("%H:%M") }}{% else %} · no specified end time{% endif %}</p>
-<p>{{ ev.description }}</p>
-{% if ev.dry %}<p class="pill green">Dry event</p>{% endif %}
+    {% if e.description %}
+      <p class="mt">{{ e.description }}</p>
+    {% endif %}
 
-{% if current_user.is_authenticated %}
-<form class="row gap" method="post" action="{{ url_for('rsvp', event_id=ev.id, status='going') }}">
-  <button class="btn" type="submit">I'm in</button>
-</form>
-<form class="row gap" method="post" action="{{ url_for('rsvp', event_id=ev.id, status='maybe') }}">
-  <button class="btn ghost" type="submit">Maybe</button>
-</form>
-<form class="row gap" method="post" action="{{ url_for('rsvp', event_id=ev.id, status='no') }}">
-  <button class="btn ghost" type="submit">Can't make it</button>
-</form>
-{% else %}
-<p class="muted">Login to RSVP</p>
-{% endif %}
+    <div class="stats">
+      <span><strong>{{ yes }}</strong> going{% if e.capacity %} / {{ e.capacity }} max{% endif %}</span>
+      <span><strong>{{ maybe }}</strong> maybe</span>
+      <span><strong>{{ no }}</strong> not going</span>
+      {% if e.is_full() %}<span class="full">Event is full</span>{% endif %}
+    </div>
 
-<h2>Potential attendees</h2>
-<div class="row wrap gap">
-  {% for u in potential %}<span class="tag">{{ u.name }}</span>{% else %}<span class="muted">No users yet.</span>{% endfor %}
-</div>
-<h2>Busy that time</h2>
-<div class="row wrap gap">
-  {% for u in busy %}<span class="tag red">{{ u.name }}</span>{% else %}<span class="muted">—</span>{% endfor %}
-</div>
+    {% if current_user.is_authenticated %}
+      <form class="rsvp" method="post" action="{{ url_for('rsvp', event_id=e.id, status='yes') }}">
+        <button class="btn{% if my == 'yes' %} active{% endif %}" {% if e.is_full() and my != 'yes' %}disabled{% endif %}>I'm going</button>
+      </form>
+      <form class="rsvp" method="post" action="{{ url_for('rsvp', event_id=e.id, status='maybe') }}">
+        <button class="btn ghost{% if my == 'maybe' %} active{% endif %}">Maybe</button>
+      </form>
+      <form class="rsvp" method="post" action="{{ url_for('rsvp', event_id=e.id, status='no') }}">
+        <button class="btn ghost{% if my == 'no' %} active{% endif %}">Can't go</button>
+      </form>
+    {% else %}
+      <p class="muted small">Please <a href="{{ url_for('login') }}">log in</a> to RSVP.</p>
+    {% endif %}
 
-<h2>Checklist</h2>
-<ul class="checklist">
-  {% for item in ev.checklist_items %}
-    <li class="row vcenter gap">
-      {% if current_user.is_authenticated and current_user.id == ev.creator_id %}
-        <input class="cb" type="checkbox" data-item="{{ item.id }}" {% if item.is_checked %}checked{% endif %}>
-      {% else %}
-        <input type="checkbox" disabled {% if item.is_checked %}checked{% endif %}>
-      {% endif %}
-      <span class="{% if item.is_checked %}done{% endif %}">{{ item.label }}</span>
-    </li>
-  {% else %}
-    <li class="muted">No items.</li>
-  {% endfor %}
-</ul>
-
-<script>
-document.querySelectorAll('.cb').forEach(cb => {
-  cb.addEventListener('change', async (e) => {
-    const id = e.target.dataset.item;
-    const res = await fetch('/toggle_item/' + id, {method:'POST'});
-    if(res.ok){
-      const li = e.target.closest('li');
-      li.querySelector('span').classList.toggle('done', e.target.checked);
-    } else {
-      alert('Not allowed');
-      e.target.checked = !e.target.checked;
-    }
-  });
-});
-</script>
+    {% if items %}
+      <div class="checklist">
+        <h3>Bring:</h3>
+        <ul>
+          {% for it in items %}<li>{{ it }}</li>{% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </article>
+</section>
 {% endblock %}
