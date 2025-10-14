@@ -47,6 +47,19 @@ def create_app():
     with app.app_context():
         try:
             db.create_all()
+from sqlalchemy import text
+
+# --- auto-add new columns if missing ---
+with app.app_context():
+    try:
+        db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS capacity INTEGER"))
+        db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS checklist TEXT DEFAULT ''"))
+        db.session.commit()
+        print("✅ ensured event columns exist")
+    except Exception as e:
+        print("⚠️ failed to ensure columns:", e)
+# ----------------------------------------
+
             db.session.execute(text("SELECT 1"))
         except Exception as e:
             print("⚠️  Postgres connection failed, falling back to SQLite:", e)
