@@ -2,39 +2,61 @@
 {% block content %}
 <article class="card detail">
   <div class="head">
-    <div class="date-badge lg"><span class="m">{{ e.date.strftime('%b') }}</span><span class="d">{{ e.date.strftime('%d') }}</span></div>
-    <div><h2>{{ e.title }}</h2>
-      <p class="muted">{{ e.date.strftime('%A, %B %d, %Y') }} • {{ e.start_time.strftime('%H:%M') }}{% if e.end_time %}–{{ e.end_time.strftime('%H:%M') }}{% else %} • No end time{% endif %}{% if e.dry %} • <span class="pill" title="Dry: no alcohol/weed permitted">Dry</span>{% endif %}</p>
+    <div class="date-badge lg">
+      <span class="m">{{ e.date.strftime('%b') }}</span>
+      <span class="d">{{ e.date.strftime('%d') }}</span>
+    </div>
+    <div>
+      <h2>{{ e.title }}</h2>
+      <p class="muted">
+        {{ e.date.strftime('%A, %B %d, %Y') }} • {{ e.start_time.strftime('%H:%M') }}
+        {% if e.end_time %}–{{ e.end_time.strftime('%H:%M') }}{% else %} • No end time{% endif %}
+        {% if e.dry %} • <span class="pill" title="Dry: no alcohol/weed permitted">Dry</span>{% endif %}
+      </p>
     </div>
   </div>
+
   {% if e.description %}<p class="mt">{{ e.description }}</p>{% endif %}
+
   <div class="stats">
     <span><strong>{{ yes }}</strong> going{% if e.capacity %} / {{ e.capacity }} max{% endif %}</span>
     <span><strong>{{ maybe }}</strong> maybe</span>
     <span><strong>{{ no }}</strong> not going</span>
     {% if yes >= (e.capacity or 0) and e.capacity %}<span class="full">Event is full</span>{% endif %}
   </div>
+
   {% if current_user.is_authenticated %}
-  <div class="rsvp-row">
-    <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='yes') }}"><button class="btn{% if my == 'yes' %} active{% endif %}">I'm going</button></form>
-    <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='maybe') }}"><button class="btn ghost{% if my == 'maybe' %} active{% endif %}">Maybe</button></form>
-    <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='no') }}"><button class="btn ghost{% if my == 'no' %} active{% endif %}">Can't go</button></form>
-  </div>
-  {% else %}<p class="muted small">Please <a href="{{ url_for('login') }}">log in</a> to RSVP.</p>{% endif %}
+    <div class="rsvp-row">
+      <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='yes') }}"><button class="btn{% if my == 'yes' %} active{% endif %}">I'm going</button></form>
+      <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='maybe') }}"><button class="btn ghost{% if my == 'maybe' %} active{% endif %}">Maybe</button></form>
+      <form method="post" action="{{ url_for('rsvp', event_id=e.id, status='no') }}"><button class="btn ghost{% if my == 'no' %} active{% endif %}">Can't go</button></form>
+    </div>
+  {% else %}
+    <p class="muted small">Please <a href="{{ url_for('login') }}">log in</a> to RSVP.</p>
+  {% endif %}
+
   {% if items %}
-  <div class="checklist">
-    <div class="checklist-head"><h3>What to bring</h3>{% if e.dry %}<span class="pill">Dry</span>{% endif %}</div>
-    <ul class="checklist-items">
-      {% for it in items %}
-      <li>
-        <form method="post" action="{{ url_for('toggle_item', event_id=e.id, item_id=it.id) }}">
-          <label class="tick"><input type="checkbox" {% if it.checked %}checked{% endif %} {% if current_user.is_anonymous or current_user.id != e.creator_id %}disabled{% endif %} onChange="this.form.submit()"><span class="{% if it.checked %}done{% endif %}">{{ it.label }}</span></label>
-        </form>
-      </li>
-      {% endfor %}
-    </ul>
-    {% if current_user.is_authenticated and current_user.id != e.creator_id %}<p class="muted small">Only the organizer can tick items.</p>{% endif %}
-  </div>
+    <div class="checklist">
+      <div class="checklist-head">
+        <h3>What to bring</h3>
+        {% if e.dry %}<span class="pill">Dry</span>{% endif %}
+      </div>
+      <ul class="checklist-items">
+        {% for it in items %}
+          <li>
+            <form method="post" action="{{ url_for('toggle_item', event_id=e.id, item_id=it.id) }}">
+              <label class="tick">
+                <input type="checkbox" {% if it.checked %}checked{% endif %} {% if current_user.is_anonymous or current_user.id != e.creator_id %}disabled{% endif %} onChange="this.form.submit()">
+                <span class="{% if it.checked %}done{% endif %}">{{ it.label }}</span>
+              </label>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+      {% if current_user.is_authenticated and current_user.id != e.creator_id %}
+        <p class="muted small">Only the organizer can tick items.</p>
+      {% endif %}
+    </div>
   {% endif %}
 </article>
 {% endblock %}
