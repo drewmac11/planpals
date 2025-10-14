@@ -73,7 +73,7 @@ def create_app():
             if u and check_password_hash(u.password_hash,pw): login_user(u); return redirect(url_for("index"))
             flash("Invalid credentials","error")
         return render_template("login.html")
-    @app.route("/logout"); @login_required
+    @app.route("/logout")
     def logout(): logout_user(); return redirect(url_for("index"))
     @app.route("/schedule", methods=["GET","POST"]); @login_required
     def schedule():
