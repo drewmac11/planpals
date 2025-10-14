@@ -151,6 +151,17 @@ def create_app():
         it.checked = not it.checked
         db.session.commit()
         return redirect(url_for("event_detail", event_id=event_id))
+    @app.post("/api/event/<int:event_id>/checklist/<int:item_id>/toggle")
+    @login_required
+    def api_toggle_item(event_id, item_id):
+        e = Event.query.get_or_404(event_id)
+        if e.creator_id != current_user.id:
+            return jsonify({"ok": False, "error": "Only the organizer can edit the checklist."}), 403
+        it = ChecklistItem.query.filter_by(id=item_id, event_id=event_id).first_or_404()
+        it.checked = not it.checked
+        db.session.commit()
+        return jsonify({"ok": True, "checked": it.checked})
+
 
     @app.route("/event/<int:event_id>/rsvp/<status>", methods=["POST"])
     @login_required
