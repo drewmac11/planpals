@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
 from datetime import datetime
@@ -7,11 +7,14 @@ from urllib.parse import urlparse
 import os
 
 from extensions import db, login_manager
-from models import User, Event, RSVP
+from models import User, Event, RSVP, Availability, ChecklistItem
 
+DEFAULT_CHECKLIST = [
+    "Chairs", "Snacks", "Alcohol", "Weed", "Soft drinks", "Water",
+    "Ice", "Cups", "Plates", "Napkins", "Games", "Music speaker"
+]
 
 def normalize_db_url(raw: str) -> str:
-    """Normalize Railway/Heroku-ish URLs to SQLAlchemy psycopg format and add sslmode when needed."""
     raw = (raw or "").strip().strip('"').strip("'")
     if raw.startswith("railwaypostgres://"):
         raw = raw.replace("railwaypostgres://", "postgres://", 1)
@@ -25,35 +28,31 @@ def normalize_db_url(raw: str) -> str:
         raw = raw.replace("postgresql://", "postgresql+psycopg://", 1)
     if raw.startswith("postgresql+psycopg://") and "sslmode=" not in raw:
         host = urlparse(raw).hostname or ""
-        # Require SSL for external hosts; Railway internal host doesn't need it
         if not host.endswith(".railway.internal"):
             raw += ("&" if "?" in raw else "?") + "sslmode=require"
     return raw
 
-
 def ensure_columns():
-    """Add new columns to 'event' if they don't exist (safe to run every boot)."""
-    db.session.execute(text(
-        "ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS capacity INTEGER"
-    ))
-    db.session.execute(text(
-        "ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS checklist TEXT DEFAULT ''"
-    ))
+    db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS capacity INTEGER"))
+    db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS checklist TEXT DEFAULT ''"))
+    db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS dry BOOLEAN DEFAULT FALSE"))
+    db.create_all()
     db.session.commit()
-    print("✅ ensured event.capacity & event.checklist exist")
+    print("✅ ensured columns & tables exist")
 
+def first_name(full: str) -> str:
+    parts = (full or "").strip().split()
+    return parts[0] if parts else ""
 
 def create_app():
     app = Flask(__name__)
-
-    # Config
     env_url = os.environ.get("DATABASE_URL", "sqlite:///planpals.db")
     db_url = normalize_db_url(env_url)
+
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-key")
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    # Extensions
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = "login"
@@ -62,7 +61,6 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # Create tables and self-heal columns
     with app.app_context():
         try:
             db.create_all()
@@ -79,27 +77,80 @@ def create_app():
             db.create_all()
             ensure_columns()
 
-    # ------------ Routes ------------
-
     @app.get("/health")
     def health():
         return "ok", 200
 
+    @app.route("/schedule", methods=["GET", "POST"])
+    @login_required
+    def schedule():
+        weekdays = list(range(7))
+        if request.method == "POST":
+            sub = request.form.getlist("weekday")
+            chosen = set(int(x) for x in sub)
+            Availability.query.filter_by(user_id=current_user.id).delete()
+            for w in sorted(chosen):
+                db.session.add(Availability(user_id=current_user.id, weekday=w))
+            db.session.commit()
+            flash("Availability updated!", "success")
+            return redirect(url_for("schedule"))
+        mine = {a.weekday for a in Availability.query.filter_by(user_id=current_user.id).all()}
+        return render_template("schedule.html", mine=mine, weekdays=weekdays)
+
+    @app.get("/who_can_attend")
+    @login_required
+    def who_can_attend():
+        date_str = request.args.get("date")
+        try:
+            dt = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except Exception:
+            return jsonify({"available": [], "busy": []})
+        weekday = dt.weekday()
+        users = User.query.all()
+        avail_map = {a.user_id: True for a in Availability.query.filter_by(weekday=weekday).all()}
+        available, busy = [], []
+        for u in users:
+            name = first_name(u.name)
+            (available if avail_map.get(u.id) else busy).append(name)
+        return jsonify({"available": available, "busy": busy})
+
     @app.route("/")
     def index():
         events = Event.query.order_by(Event.date.asc()).all()
-        return render_template("index.html", events=events)
+        data = []
+        for e in events:
+            yes = [first_name(u.name) for u in User.query.join(RSVP, RSVP.user_id==User.id).filter(RSVP.event_id==e.id, RSVP.status=='yes').all()]
+            maybe = [first_name(u.name) for u in User.query.join(RSVP, RSVP.user_id==User.id).filter(RSVP.event_id==e.id, RSVP.status=='maybe').all()]
+            no = [first_name(u.name) for u in User.query.join(RSVP, RSVP.user_id==User.id).filter(RSVP.event_id==e.id, RSVP.status=='no').all()]
+            weekday = e.date.weekday()
+            avail_user_ids = {a.user_id for a in Availability.query.filter_by(weekday=weekday).all()}
+            all_users = User.query.all()
+            busy = [first_name(u.name) for u in all_users if u.id not in avail_user_ids]
+            data.append((e, yes, maybe, no, busy))
+        return render_template("index.html", events_data=data)
 
     @app.route("/event/<int:event_id>")
     def event_detail(event_id):
         e = Event.query.get_or_404(event_id)
         yes, maybe, no = e.rsvp_counts()
-        items = [line.strip() for line in (e.checklist or '').splitlines() if line.strip()]
+        items = ChecklistItem.query.filter_by(event_id=e.id).order_by(ChecklistItem.id.asc()).all()
         my = None
         if current_user.is_authenticated:
             r = RSVP.query.filter_by(event_id=event_id, user_id=current_user.id).first()
             my = r.status if r else None
         return render_template("event.html", e=e, yes=yes, maybe=maybe, no=no, items=items, my=my)
+
+    @app.post("/event/<int:event_id>/checklist/toggle/<int:item_id>")
+    @login_required
+    def toggle_item(event_id, item_id):
+        e = Event.query.get_or_404(event_id)
+        if e.creator_id != current_user.id:
+            flash("Only the organizer can edit the checklist.", "error")
+            return redirect(url_for("event_detail", event_id=event_id))
+        it = ChecklistItem.query.filter_by(id=item_id, event_id=event_id).first_or_404()
+        it.checked = not it.checked
+        db.session.commit()
+        return redirect(url_for("event_detail", event_id=event_id))
 
     @app.route("/event/<int:event_id>/rsvp/<status>", methods=["POST"])
     @login_required
@@ -108,14 +159,10 @@ def create_app():
         if status not in ("yes", "no", "maybe"):
             flash("Invalid RSVP.", "error")
             return redirect(url_for("event_detail", event_id=event_id))
-
         e = Event.query.get_or_404(event_id)
-        if status == "yes" and e.is_full() and not RSVP.query.filter_by(
-            event_id=event_id, user_id=current_user.id, status="yes"
-        ).first():
+        if status == "yes" and e.is_full() and not RSVP.query.filter_by(event_id=event_id, user_id=current_user.id, status="yes").first():
             flash("Sorry, this event is full.", "error")
             return redirect(url_for("event_detail", event_id=event_id))
-
         rec = RSVP.query.filter_by(event_id=event_id, user_id=current_user.id).first()
         if rec:
             rec.status = status
@@ -131,7 +178,6 @@ def create_app():
             name = request.form["name"].strip()
             email = request.form["email"].strip().lower()
             password = request.form["password"]
-
             if User.query.filter_by(email=email).first():
                 flash("Email already registered", "error")
             else:
@@ -167,6 +213,7 @@ def create_app():
             title = request.form["title"].strip()
             date_str = request.form["date"].strip()
             desc = request.form["description"].strip()
+            dry = True if request.form.get("dry") == "on" else False
 
             capacity_raw = request.form.get("capacity", "").strip()
             if not capacity_raw:
@@ -180,7 +227,7 @@ def create_app():
                 flash("Capacity must be a number ≥ 1.", "error")
                 return render_template("create.html")
 
-            checklist_raw = request.form.get("checklist", "").strip()
+            custom_checklist_raw = request.form.get("checklist", "").strip()
 
             try:
                 dt = datetime.strptime(date_str, "%Y-%m-%d").date()
@@ -189,22 +236,28 @@ def create_app():
                 return render_template("create.html")
 
             e = Event(
-                title=title,
-                date=dt,
-                description=desc,
-                creator_id=current_user.id,
-                capacity=cap,
-                checklist=checklist_raw,
+                title=title, date=dt, description=desc, creator_id=current_user.id,
+                capacity=cap, checklist=custom_checklist_raw, dry=dry
             )
             db.session.add(e)
             db.session.commit()
+
+            labels = list(DEFAULT_CHECKLIST)
+            if custom_checklist_raw:
+                for line in custom_checklist_raw.splitlines():
+                    t = line.strip()
+                    if t and t not in labels:
+                        labels.append(t)
+            for lbl in labels:
+                db.session.add(ChecklistItem(event_id=e.id, label=lbl))
+            db.session.commit()
+
             flash("Event created!", "success")
             return redirect(url_for("event_detail", event_id=e.id))
 
         return render_template("create.html")
 
     return app
-
 
 if __name__ == "__main__":
     app = create_app()
