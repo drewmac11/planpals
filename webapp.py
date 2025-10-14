@@ -13,6 +13,71 @@ def normalize_db_url(raw_url: str) -> str:
     # Railway often provides SSL by default; SQLAlchemy handles with query args if present
     return raw_url
 
+from sqlalchemy import text, inspect
+
+def _bootstrap_migrations(app):
+    """Create any new columns/tables if they don't exist (Postgres/SQLite safe)."""
+    from extensions import db
+    with app.app_context():
+        eng = db.engine
+        insp = inspect(eng)
+
+        # Required tables
+        with eng.begin() as conn:
+            conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS availability_window (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES "user"(id),
+                date DATE NOT NULL,
+                start_time TIME NOT NULL,
+                end_time TIME NOT NULL,
+                is_unavailable BOOLEAN NOT NULL DEFAULT TRUE
+            )
+            """))
+            conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS checklist_item (
+                id SERIAL PRIMARY KEY,
+                event_id INTEGER NOT NULL REFERENCES event(id),
+                label TEXT NOT NULL,
+                is_checked BOOLEAN NOT NULL DEFAULT FALSE,
+                added_by_user_id INTEGER NULL REFERENCES "user"(id)
+            )
+            """))
+
+        # event columns
+        cols = {c['name'] for c in insp.get_columns('event')}
+        ddl = []
+        if 'doors_open_time' not in cols:
+            ddl.append('ALTER TABLE event ADD COLUMN IF NOT EXISTS doors_open_time TIME')
+        if 'leave_by_time' not in cols:
+            ddl.append('ALTER TABLE event ADD COLUMN IF NOT EXISTS leave_by_time TIME')
+        if 'no_specified_end_time' not in cols:
+            ddl.append('ALTER TABLE event ADD COLUMN IF NOT EXISTS no_specified_end_time BOOLEAN NOT NULL DEFAULT FALSE')
+        if 'dry' not in cols:
+            ddl.append('ALTER TABLE event ADD COLUMN IF NOT EXISTS dry BOOLEAN NOT NULL DEFAULT FALSE')
+        if 'capacity' not in cols:
+            ddl.append('ALTER TABLE event ADD COLUMN IF NOT EXISTS capacity INTEGER NOT NULL DEFAULT 0')
+        if ddl:
+            with eng.begin() as conn:
+                for stmt in ddl:
+                    conn.execute(text(stmt))
+
+        # Unique constraint for RSVP (Postgres best-effort)
+        try:
+            if insp.dialect.name == 'postgresql':
+                with eng.begin() as conn:
+                    conn.execute(text("""
+                    DO $$ BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint WHERE conname = 'uq_event_user'
+                    ) THEN
+                        ALTER TABLE rsvp ADD CONSTRAINT uq_event_user UNIQUE (event_id, user_id);
+                    END IF;
+                    END $$;
+                    """))
+        except Exception:
+            pass
+
 def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static')
     app.secret_key = os.environ.get("SECRET_KEY","dev-secret")
@@ -28,7 +93,7 @@ def create_app():
 
     with app.app_context():
         db.create_all()
-    _bootstrap_migrations(app)
+        _bootstrap_migrations(app)
     return app
 
 app = create_app()
@@ -299,75 +364,6 @@ def delete_event(event_id:int):
     db.session.commit()
     flash("Event deleted.","success")
     return redirect(url_for("profile"))
-
-
-
-from sqlalchemy import text, inspect
-
-def _bootstrap_migrations(app):
-    """Create any new columns/tables if they don't exist (Postgres/SQLite safe)."""
-    from extensions import db
-    with app.app_context():
-        eng = db.engine
-        insp = inspect(eng)
-
-        # Ensure required tables exist
-        with eng.begin() as conn:
-            conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS availability_window (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL REFERENCES "user"(id),
-                date DATE NOT NULL,
-                start_time TIME NOT NULL,
-                end_time TIME NOT NULL,
-                is_unavailable BOOLEAN NOT NULL DEFAULT TRUE
-            )
-            """))
-            conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS checklist_item (
-                id SERIAL PRIMARY KEY,
-                event_id INTEGER NOT NULL REFERENCES event(id),
-                label TEXT NOT NULL,
-                is_checked BOOLEAN NOT NULL DEFAULT FALSE,
-                added_by_user_id INTEGER NULL REFERENCES "user"(id)
-            )
-            """))
-
-        # Add missing columns on event
-        cols = {c['name'] for c in insp.get_columns('event')}
-        ddl = []
-        if 'doors_open_time' not in cols:
-            ddl.append("ALTER TABLE event ADD COLUMN IF NOT EXISTS doors_open_time TIME")
-        if 'leave_by_time' not in cols:
-            ddl.append("ALTER TABLE event ADD COLUMN IF NOT EXISTS leave_by_time TIME")
-        if 'no_specified_end_time' not in cols:
-            ddl.append("ALTER TABLE event ADD COLUMN IF NOT EXISTS no_specified_end_time BOOLEAN NOT NULL DEFAULT FALSE")
-        if 'dry' not in cols:
-            ddl.append("ALTER TABLE event ADD COLUMN IF NOT EXISTS dry BOOLEAN NOT NULL DEFAULT FALSE")
-        if 'capacity' not in cols:
-            ddl.append("ALTER TABLE event ADD COLUMN IF NOT EXISTS capacity INTEGER NOT NULL DEFAULT 0")
-
-        if ddl:
-            with eng.begin() as conn:
-                for stmt in ddl:
-                    conn.execute(text(stmt))
-
-        # Unique constraint for RSVP on Postgres (best effort)
-        try:
-            if insp.dialect.name == 'postgresql':
-                with eng.begin() as conn:
-                    conn.execute(text("""
-                    DO $$ BEGIN
-                    IF NOT EXISTS (
-                        SELECT 1 FROM pg_constraint WHERE conname = 'uq_event_user'
-                    ) THEN
-                        ALTER TABLE rsvp ADD CONSTRAINT uq_event_user UNIQUE (event_id, user_id);
-                    END IF;
-                    END $$;
-                    """))
-        except Exception:
-            pass
-
 
 
 @app.route('/health')
