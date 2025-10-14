@@ -3,14 +3,16 @@
 <article class="card detail">
   <div class="head">
     <div class="date-badge lg">
-      <span class="m">{{ e.date.strftime('%b') }}</span>
-      <span class="d">{{ e.date.strftime('%d') }}</span>
+      <span class="m">{{ e.date.strftime('%b') if e.date else 'TBA' }}</span>
+      <span class="d">{{ e.date.strftime('%d') if e.date else '—' }}</span>
     </div>
     <div>
       <h2>{{ e.title }}</h2>
       <p class="muted">
-        {{ e.date.strftime('%A, %B %d, %Y') }} • {{ e.start_time.strftime('%H:%M') }}
-        {% if e.end_time %}–{{ e.end_time.strftime('%H:%M') }}{% else %} • No end time{% endif %}
+        {{ e.date.strftime('%A, %B %d, %Y') if e.date else 'Date TBA' }}
+        •
+        {% if e.start_time %}{{ e.start_time.strftime('%H:%M') }}{% else %}Time TBA{% endif %}
+        {% if e.end_time %}–{{ e.end_time.strftime('%H:%M') }}{% elif e.start_time %} • No end time{% endif %}
         {% if e.dry %} • <span class="pill" title="Dry: no alcohol/weed permitted">Dry</span>{% endif %}
       </p>
     </div>
@@ -22,7 +24,7 @@
     <span><strong>{{ yes }}</strong> going{% if e.capacity %} / {{ e.capacity }} max{% endif %}</span>
     <span><strong>{{ maybe }}</strong> maybe</span>
     <span><strong>{{ no }}</strong> not going</span>
-    {% if yes >= (e.capacity or 0) and e.capacity %}<span class="full">Event is full</span>{% endif %}
+    {% if e.capacity and yes >= e.capacity %}<span class="full">Event is full</span>{% endif %}
   </div>
 
   {% if current_user.is_authenticated %}

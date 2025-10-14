@@ -10,14 +10,16 @@
       {% for e, yes_names, maybe_names, no_names in events_data %}
         <article class="card">
           <div class="date-badge">
-            <span class="m">{{ e.date.strftime('%b') }}</span>
-            <span class="d">{{ e.date.strftime('%d') }}</span>
+            <span class="m">{{ e.date.strftime('%b') if e.date else 'TBA' }}</span>
+            <span class="d">{{ e.date.strftime('%d') if e.date else '—' }}</span>
           </div>
           <div class="content">
             <h3><a href="{{ url_for('event_detail', event_id=e.id) }}" class="title-link">{{ e.title }}</a></h3>
             <p class="muted">
-              {{ e.date.strftime('%A, %B %d, %Y') }} • {{ e.start_time.strftime('%H:%M') }}
-              {% if e.end_time %}–{{ e.end_time.strftime('%H:%M') }}{% else %} • No end time{% endif %}
+              {{ e.date.strftime('%A, %B %d, %Y') if e.date else 'Date TBA' }}
+              •
+              {% if e.start_time %}{{ e.start_time.strftime('%H:%M') }}{% else %}Time TBA{% endif %}
+              {% if e.end_time %}–{{ e.end_time.strftime('%H:%M') }}{% elif e.start_time %} • No end time{% endif %}
               {% if e.dry %} • <span class="pill" title="Dry: no alcohol/weed permitted">Dry</span>{% endif %}
             </p>
             {% if e.description %}<p>{{ e.description }}</p>{% endif %}
