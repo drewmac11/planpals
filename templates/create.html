@@ -10,9 +10,17 @@
         <label>Date</label>
         <input name="date" type="date" required />
       </div>
+      <div class="col">
+        <label>Max attendees <span class="muted small">(optional)</span></label>
+        <input name="capacity" type="number" min="0" placeholder="e.g. 8" />
+      </div>
     </div>
     <label>Description <span class="muted small">(optional)</span></label>
     <textarea name="description" rows="4" placeholder="Snacks at 7, games at 7:30."></textarea>
+    <label>Checklist <span class="muted small">(one per line)</span></label>
+    <textarea name="checklist" rows="4" placeholder="Bring your own snacks
+Chairs if you have them
+Deck of cards"></textarea>
     <button class="btn wide">Create event</button>
   </form>
 </section>
