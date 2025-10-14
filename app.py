@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, date, time
+import datetime as dt
 from urllib.parse import urlparse
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import login_user, logout_user, current_user, login_required
@@ -38,7 +38,7 @@ def load_user(user_id):
 
 @app.context_processor
 def inject_now():
-    return {"now": datetime.utcnow()}
+    return {"now": dt.datetime.utcnow()}
 
 @app.route("/")
 def index():
@@ -60,8 +60,8 @@ def index():
             else:
                 for w in awins:
                     if w.is_unavailable:
-                        w_start = datetime.combine(w.date, w.start_time)
-                        w_end = datetime.combine(w.date, w.end_time)
+                        w_start = dt.datetime.combine(w.date, w.start_time)
+                        w_end = dt.datetime.combine(w.date, w.end_time)
                         # overlap
                         if not (w_end <= ev_start or w_start >= ev_end):
                             busy = True; break
@@ -128,12 +128,12 @@ def create():
             return redirect(url_for("create"))
         ev = Event(
             title=title,
-            date=datetime.strptime(date_str,"%Y-%m-%d").date(),
+            date=dt.datetime.strptime(date_str,"%Y-%m-%d").date(),
             description=description,
             capacity=capacity,
             dry=dry,
-            doors_open_time=datetime.strptime(doors_open,"%H:%M").time() if doors_open else None,
-            leave_by_time=None if no_end else (datetime.strptime(leave_by,"%H:%M").time() if leave_by else None),
+            doors_open_time=dt.datetime.strptime(doors_open,"%H:%M").time() if doors_open else None,
+            leave_by_time=None if no_end else (dt.datetime.strptime(leave_by,"%H:%M").time() if leave_by else None),
             no_specified_end_time=no_end,
             creator_id=current_user.id
         )
@@ -172,8 +172,8 @@ def event_detail(event_id:int):
         if ev_end is not None:
             for w in awins:
                 if w.is_unavailable:
-                    w_start = datetime.combine(w.date, w.start_time)
-                    w_end = datetime.combine(w.date, w.end_time)
+                    w_start = dt.datetime.combine(w.date, w.start_time)
+                    w_end = dt.datetime.combine(w.date, w.end_time)
                     if not (w_end <= ev_start or w_start >= ev_end):
                         is_busy = True; break
         (busy if is_busy else potential).append(u)
@@ -221,9 +221,9 @@ def schedule():
             return redirect(url_for("schedule"))
         aw = AvailabilityWindow(
             user_id=current_user.id,
-            date=datetime.strptime(date_str,"%Y-%m-%d").date(),
-            start_time=datetime.strptime(start,"%H:%M").time(),
-            end_time=datetime.strptime(end,"%H:%M").time(),
+            date=dt.datetime.strptime(date_str,"%Y-%m-%d").date(),
+            start_time=dt.datetime.strptime(start,"%H:%M").time(),
+            end_time=dt.datetime.strptime(end,"%H:%M").time(),
             is_unavailable=True
         )
         db.session.add(aw)
@@ -258,15 +258,15 @@ def edit_event(event_id:int):
         abort(403)
     if request.method == "POST":
         ev.title = request.form["title"].strip()
-        ev.date = datetime.strptime(request.form["date"],"%Y-%m-%d").date()
+        ev.date = dt.datetime.strptime(request.form["date"],"%Y-%m-%d").date()
         ev.description = request.form.get("description","").strip()
         ev.capacity = int(request.form.get("capacity","0") or 0)
         ev.dry = bool(request.form.get("dry"))
         doors_open = request.form.get("doors_open_time") or None
         leave_by = request.form.get("leave_by_time") or None
         no_end = bool(request.form.get("no_end"))
-        ev.doors_open_time = datetime.strptime(doors_open,"%H:%M").time() if doors_open else None
-        ev.leave_by_time = None if no_end else (datetime.strptime(leave_by,"%H:%M").time() if leave_by else None)
+        ev.doors_open_time = dt.datetime.strptime(doors_open,"%H:%M").time() if doors_open else None
+        ev.leave_by_time = None if no_end else (dt.datetime.strptime(leave_by,"%H:%M").time() if leave_by else None)
         ev.no_specified_end_time = no_end
         # replace checklist if provided
         if "bring[]" in request.form or "bring_other" in request.form:

@@ -1,4 +1,5 @@
-from datetime import datetime, time, date
+from __future__ import annotations
+import datetime as dt
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from sqlalchemy import func, UniqueConstraint, ForeignKey
@@ -10,7 +11,7 @@ class User(UserMixin, db.Model):
     name: Mapped[str] = mapped_column(nullable=False)
     email: Mapped[str] = mapped_column(unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(nullable=False)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+    created_at: Mapped[dt.datetime] = mapped_column(default=dt.datetime.utcnow, nullable=False)
 
     events = relationship("Event", back_populates="creator", cascade="all, delete-orphan")
 
@@ -23,17 +24,17 @@ class User(UserMixin, db.Model):
 class Event(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(nullable=False)
-    date: Mapped[date] = mapped_column(nullable=False, index=True)
+    date: Mapped[dt.date] = mapped_column(nullable=False, index=True)
     description: Mapped[str] = mapped_column(default="")
     capacity: Mapped[int] = mapped_column(default=0)
     dry: Mapped[bool] = mapped_column(default=False)
 
-    doors_open_time: Mapped[time | None] = mapped_column(nullable=True)
-    leave_by_time: Mapped[time | None] = mapped_column(nullable=True)
+    doors_open_time: Mapped[dt.time | None] = mapped_column(nullable=True)
+    leave_by_time: Mapped[dt.time | None] = mapped_column(nullable=True)
     no_specified_end_time: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     creator_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False, index=True)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+    created_at: Mapped[dt.datetime] = mapped_column(default=dt.datetime.utcnow, nullable=False)
 
     creator = relationship("User", back_populates="events")
     rsvps = relationship("RSVP", back_populates="event", cascade="all, delete-orphan")
@@ -59,9 +60,9 @@ class RSVP(db.Model):
 class AvailabilityWindow(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False, index=True)
-    date: Mapped[date] = mapped_column(nullable=False, index=True)
-    start_time: Mapped[time] = mapped_column(nullable=False)
-    end_time: Mapped[time] = mapped_column(nullable=False)
+    date: Mapped[dt.date] = mapped_column(nullable=False, index=True)
+    start_time: Mapped[dt.time] = mapped_column(nullable=False)
+    end_time: Mapped[dt.time] = mapped_column(nullable=False)
     is_unavailable: Mapped[bool] = mapped_column(default=True, nullable=False)
 
     user = relationship("User")
