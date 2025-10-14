@@ -1,1 +1,15 @@
-{% extends 'base.html' %}{% block content %}<form method='post'><input type='datetime-local' name='start_dt'><input type='datetime-local' name='end_dt'><button>Add</button></form>{% endblock %}
+{% extends 'base.html' %}
+{% block content %}
+<section class="section">
+  <h2>Your schedule (busy blocks)</h2>
+  <form method="post" class="form grid2">
+    <label>Start (busy from)<input type="datetime-local" name="start_dt" required></label>
+    <label>End (busy to)<input type="datetime-local" name="end_dt" required></label>
+    <div class="actions full"><button class="btn">Add busy time</button></div>
+  </form>
+  <h3 class="mt">Existing</h3>
+  {% if blocks %}
+    <ul class="list">{% for b in blocks %}<li>{{ b.start_dt.strftime('%Y-%m-%d %H:%M') }} → {{ b.end_dt.strftime('%Y-%m-%d %H:%M') }}</li>{% endfor %}</ul>
+  {% else %}<p class="muted">No busy times saved yet.</p>{% endif %}
+</section>
+{% endblock %}

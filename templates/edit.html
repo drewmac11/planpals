@@ -1,1 +1,17 @@
-{% extends 'base.html' %}{% block content %}<form method='post'><input name='title' value='{{ e.title }}'><button>Save</button></form>{% endblock %}
+{% extends 'base.html' %}
+{% block content %}
+<section class="section">
+  <h2>Edit event</h2>
+  <form method="post" class="form grid2">
+    <label>Title<input name="title" value="{{ e.title }}" required></label>
+    <label>Date<input type="date" name="date" value="{{ e.date.strftime('%Y-%m-%d') }}" required></label>
+    <label>Start time<input type="time" name="start_time" value="{{ e.start_time.strftime('%H:%M') }}" required></label>
+    <label>End time<input type="time" name="end_time" value="{{ e.end_time.strftime('%H:%M') if e.end_time }}"></label>
+    <label class="row">No end time <input type="checkbox" name="no_end" {% if not e.end_time %}checked{% endif %}></label>
+    <label>Capacity<input type="number" min="1" name="capacity" value="{{ e.capacity }}" required></label>
+    <label class="row">Dry event <input type="checkbox" name="dry" {% if e.dry %}checked{% endif %}></label>
+    <label class="full">Description<textarea name="description" rows="3">{{ e.description }}</textarea></label>
+    <div class="actions full"><button class="btn">Save</button></div>
+  </form>
+</section>
+{% endblock %}

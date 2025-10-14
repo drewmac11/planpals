@@ -1,1 +1,43 @@
-{% extends 'base.html' %}{% block content %}<form method='post'><input name='title' required><input name='date' type='date' required><input name='start_time' type='time' required><input name='capacity' type='number' min='1' required><button>Create</button></form>{% endblock %}
+{% extends 'base.html' %}
+{% block content %}
+<section class="section">
+  <h2>Create an event</h2>
+  <form method="post" class="form grid2">
+    <label>Title<input name="title" required placeholder="Board Game Night"></label>
+    <label>Date<input type="date" name="date" required oninput="updatePotentials()"></label>
+    <label>Start time<input type="time" name="start_time" required oninput="updatePotentials()"></label>
+    <label>End time<input type="time" name="end_time" oninput="updatePotentials()"></label>
+    <label class="row">No end time <input type="checkbox" name="no_end" onchange="toggleEnd(this)"></label>
+    <label>Capacity<input type="number" min="1" name="capacity" required placeholder="e.g. 10"></label>
+    <label class="row">Dry event <input type="checkbox" name="dry"><span class="hint" title="Dry: no alcohol/weed permitted">?</span></label>
+    <label class="full">Description<textarea name="description" rows="3" placeholder="Optional details"></textarea></label>
+    <div class="full potentials"><strong>Potential attendees:</strong><div id="potentials"><em class="muted">Pick a date/time to see who’s free.</em></div></div>
+    <fieldset class="full"><legend>What to bring</legend>
+      <div class="checks">
+        {% for item in defaults %}
+        <label class="tick"><input type="checkbox" name="preset_item" value="{{ item }}"><span>{{ item }}</span></label>
+        {% endfor %}
+      </div>
+      <label class="full">Other (one per line)<textarea name="checklist" rows="3" placeholder="e.g. Candles&#10;Projector&#10;Cards"></textarea></label>
+    </fieldset>
+    <div class="actions full"><button class="btn">Create event</button></div>
+  </form>
+</section>
+<script>
+function toggleEnd(cb){ const end=document.querySelector('input[name="end_time"]'); if(end){ end.disabled=cb.checked; } updatePotentials(); }
+async function updatePotentials(){
+  const d=document.querySelector('input[name="date"]').value;
+  const st=document.querySelector('input[name="start_time"]').value;
+  const et=document.querySelector('input[name="end_time"]').value;
+  const noEnd=document.querySelector('input[name="no_end"]').checked;
+  if(!d||!st) return;
+  const qs=new URLSearchParams({date:d,start:st}); if(et && !noEnd) qs.set('end', et);
+  try{
+    const r=await fetch('/who_can_attend?'+qs.toString()); const j=await r.json();
+    const wrap=document.getElementById('potentials');
+    wrap.innerHTML = '<div><strong>Available:</strong> '+(j.available.length? j.available.join(', ') : '—')+'</div>' +
+                     '<div><strong>Busy:</strong> ' + (j.busy.length? '<span class="bad">'+j.busy.join(', ')+'</span>' : '—') + '</div>';
+  }catch(e){}
+}
+</script>
+{% endblock %}

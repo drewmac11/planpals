@@ -1,1 +1,28 @@
-{% extends 'base.html' %}{% block content %}<h1>Events</h1>{% for e,_,_,_ in events_data %}<div><a href='{{ url_for('event_detail', event_id=e.id) }}'>{{ e.title }}</a></div>{% endfor %}{% endblock %}
+{% extends 'base.html' %}
+{% block content %}
+<section class="section">
+  <div class="section-head"><h2>Upcoming events</h2>{% if current_user.is_authenticated %}<a class="btn small" href="{{ url_for('create_event') }}">+ New</a>{% endif %}</div>
+  {% if events_data %}
+  <div class="grid">
+    {% for e, yes_names, maybe_names, no_names in events_data %}
+    <article class="card">
+      <div class="date-badge"><span class="m">{{ e.date.strftime('%b') }}</span><span class="d">{{ e.date.strftime('%d') }}</span></div>
+      <div class="content">
+        <h3><a class="title-link" href="{{ url_for('event_detail', event_id=e.id) }}">{{ e.title }}</a></h3>
+        <p class="muted">{{ e.date.strftime('%A, %B %d, %Y') }} • {{ e.start_time.strftime('%H:%M') }}{% if e.end_time %}–{{ e.end_time.strftime('%H:%M') }}{% else %} • No end time{% endif %}{% if e.dry %} • <span class="pill" title="Dry: no alcohol/weed permitted">Dry</span>{% endif %}</p>
+        {% if e.description %}<p>{{ e.description }}</p>{% endif %}
+        <div class="names">
+          <div><strong>Going:</strong> {{ yes_names|join(', ') if yes_names else '—' }}</div>
+          <div><strong>Maybe:</strong> {{ maybe_names|join(', ') if maybe_names else '—' }}</div>
+          <div><strong>No:</strong> <span class="bad">{{ no_names|join(', ') if no_names else '—' }}</span></div>
+        </div>
+        <div class="muted small">{% set yes, maybe, no = e.rsvp_counts() %}<strong>{{ yes }}</strong> going{% if e.capacity %} / {{ e.capacity }} max{% endif %} • <strong>{{ maybe }}</strong> maybe</div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+    <div class="empty"><h3>No events yet</h3><p>Create your first event and invite your friends.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

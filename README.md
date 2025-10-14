@@ -1,4 +1,3 @@
+# PlanPals v3.3
 
-# PlanPals v3.1 (bundle)
-
-This is the deployable bundle for Railway or local dev. See app.py for configuration.
+Full-featured build with dynamic UI, profile, schedules, checklist, dry mode.
