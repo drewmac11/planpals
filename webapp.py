@@ -57,6 +57,8 @@ def _bootstrap_migrations(app):
             ddl.append('ALTER TABLE event ADD COLUMN IF NOT EXISTS dry BOOLEAN NOT NULL DEFAULT FALSE')
         if 'capacity' not in cols:
             ddl.append('ALTER TABLE event ADD COLUMN IF NOT EXISTS capacity INTEGER NOT NULL DEFAULT 0')
+        if 'created_at' not in cols:
+            ddl.append('ALTER TABLE event ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()')
         if ddl:
             with eng.begin() as conn:
                 for stmt in ddl:
