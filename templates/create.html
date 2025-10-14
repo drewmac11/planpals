@@ -2,25 +2,40 @@
 {% block content %}
 <section class="auth">
   <h2>Create an event</h2>
-  <form method="post" class="form">
+  <form method="post" class="form" id="create-form">
     <label>Title</label>
     <input name="title" placeholder="Board game night" required />
     <div class="row">
       <div class="col">
         <label>Date</label>
-        <input name="date" type="date" required />
+        <input id="event-date" name="date" type="date" required />
       </div>
       <div class="col">
         <label>Max attendees</label>
         <input name="capacity" type="number" min="1" step="1" required placeholder="e.g. 8" />
       </div>
     </div>
-    <label>Description <span class="muted small">(optional)</span></label>
-    <textarea name="description" rows="4" placeholder="Snacks at 7, games at 7:30."></textarea>
-    <label>Checklist <span class="muted small">(one per line)</span></label>
-    <textarea name="checklist" rows="4" placeholder="Bring your own snacks
-Chairs if you have them
-Deck of cards"></textarea>
+    <div class="row">
+      <label class="chk-inline" title="Dry: no alcohol/weed permitted">
+        <input type="checkbox" name="dry" />
+        <span>Dry</span>
+        <span class="info" title="Dry means no alcohol/weed permitted for this event.">ⓘ</span>
+      </label>
+    </div>
+
+    <div class="potential">
+      <div class="bold">Potential attendees</div>
+      <div class="pot-content">
+        <div><strong>Available:</strong> <span id="pot-available" class="muted">—</span></div>
+        <div><strong>Not available:</strong> <span id="pot-busy" class="busy">—</span></div>
+      </div>
+    </div>
+
+    <label>Additional checklist items <span class="muted small">(one per line)</span></label>
+    <textarea name="checklist" rows="4" placeholder="Cooler
+Charcoal
+Projector"></textarea>
+
     <button class="btn wide">Create event</button>
   </form>
 </section>

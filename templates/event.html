@@ -9,7 +9,7 @@
       </div>
       <div>
         <h2>{{ e.title }}</h2>
-        <p class="muted">{{ e.date.strftime('%A, %B %d, %Y') }}</p>
+        <p class="muted">{{ e.date.strftime('%A, %B %d, %Y') }}{% if e.dry %} • <span class="dry" title="Dry: no alcohol/weed permitted">Dry</span>{% endif %}</p>
       </div>
     </div>
 
@@ -40,10 +40,23 @@
 
     {% if items %}
       <div class="checklist">
-        <h3>Bring:</h3>
-        <ul>
-          {% for it in items %}<li>{{ it }}</li>{% endfor %}
+        <div class="checklist-head">
+          <h3>What to bring</h3>
+          {% if e.dry %}<span class="pill">Dry</span>{% endif %}
+        </div>
+        <ul class="checklist-items">
+          {% for it in items %}
+            <li>
+              <form method="post" action="{{ url_for('toggle_item', event_id=e.id, item_id=it.id) }}">
+                <input type="checkbox" {% if it.checked %}checked{% endif %} {% if current_user.id != e.creator_id %}disabled{% endif %} onChange="this.form.submit()">
+                <span class="{% if it.checked %}done{% endif %}">{{ it.label }}</span>
+              </form>
+            </li>
+          {% endfor %}
         </ul>
+        {% if current_user.id != e.creator_id %}
+          <p class="muted small">Only the organizer can tick items.</p>
+        {% endif %}
       </div>
     {% endif %}
   </article>

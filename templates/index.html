@@ -8,10 +8,9 @@
       {% endif %}
     </div>
 
-    {% if events %}
+    {% if events_data %}
       <div class="grid">
-        {% for e in events %}
-          {% set yes, maybe, no = e.rsvp_counts() %}
+        {% for e, yes_names, maybe_names, no_names, busy_names in events_data %}
           <article class="card event">
             <div class="date-badge">
               <span class="m">{{ e.date.strftime('%b') }}</span>
@@ -19,9 +18,20 @@
             </div>
             <div class="card-body">
               <h3><a class="title-link" href="{{ url_for('event_detail', event_id=e.id) }}">{{ e.title }}</a></h3>
-              <p class="muted">{{ e.date.strftime('%A, %B %d, %Y') }}</p>
+              <p class="muted">{{ e.date.strftime('%A, %B %d, %Y') }}{% if e.dry %} • <span class="dry" title="Dry: no alcohol/weed permitted">Dry</span>{% endif %}</p>
               {% if e.description %}<p>{{ e.description }}</p>{% endif %}
+
+              <div class="muted small row-names">
+                <div><strong>Going:</strong> {% if yes_names %}{{ yes_names|join(', ') }}{% else %}<span class="muted">—</span>{% endif %}</div>
+                <div><strong>Maybe:</strong> {% if maybe_names %}{{ maybe_names|join(', ') }}{% else %}<span class="muted">—</span>{% endif %}</div>
+                <div><strong>No:</strong> {% if no_names %}{{ no_names|join(', ') }}{% else %}<span class="muted">—</span>{% endif %}</div>
+              </div>
+              <div class="muted small row-names">
+                <div><strong>Busy:</strong> {% if busy_names %}<span class="busy">{{ busy_names|join(', ') }}</span>{% else %}<span class="muted">—</span>{% endif %}</div>
+              </div>
+
               <div class="muted small">
+                {% set yes, maybe, no = e.rsvp_counts() %}
                 <strong>{{ yes }}</strong> going{% if e.capacity %} / {{ e.capacity }} max{% endif %}
                 • <strong>{{ maybe }}</strong> maybe
               </div>

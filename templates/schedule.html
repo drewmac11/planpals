@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="auth">
+  <h2>Your weekly availability</h2>
+  <p class="muted">Pick the days you’re usually free. We’ll use this to guess who can attend new events.</p>
+  <form method="post" class="form">
+    <div class="week-grid">
+      {% set names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}
+      {% for i in range(7) %}
+        <label class="chk">
+          <input type="checkbox" name="weekday" value="{{ i }}" {% if i in mine %}checked{% endif %} />
+          <span>{{ names[i] }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    <button class="btn">Save availability</button>
+  </form>
+</section>
+{% endblock %}

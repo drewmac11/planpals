@@ -15,8 +15,9 @@ class Event(db.Model):
     date = db.Column(db.Date, nullable=False, index=True)
     description = db.Column(db.Text, default='')
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    capacity = db.Column(db.Integer)  # required by UI; validated server-side >=1
-    checklist = db.Column(db.Text, default='')  # newline-separated items
+    capacity = db.Column(db.Integer)
+    checklist = db.Column(db.Text, default='')
+    dry = db.Column(db.Boolean, default=False)
 
     def rsvp_counts(self):
         yes = RSVP.query.filter_by(event_id=self.id, status='yes').count()
@@ -35,5 +36,17 @@ class RSVP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False, index=True)
-    status = db.Column(db.String(10), nullable=False, default='yes')  # yes / no / maybe
+    status = db.Column(db.String(10), nullable=False, default='yes')
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
+
+class Availability(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    weekday = db.Column(db.Integer, nullable=False)  # 0=Mon ... 6=Sun
+    __table_args__ = (UniqueConstraint('user_id', 'weekday', name='uniq_user_weekday'),)
+
+class ChecklistItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False, index=True)
+    label = db.Column(db.String(200), nullable=False)
+    checked = db.Column(db.Boolean, default=False)
