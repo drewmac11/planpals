@@ -70,7 +70,7 @@ def create_app():
             enriched.append((e, yes_names, maybe_names, no_names))
         return render_template("index.html", events_data=enriched)
 
-    @app.route("/register", methods=["GET", "POST'])
+    @app.route("/register", methods=["GET", "POST"])
     def register():
         if request.method == "POST":
             name = request.form.get("name", "").strip() or "John Doe"
