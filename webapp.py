@@ -31,6 +31,7 @@ def create_app():
     return app
 
 app = create_app()
+print("PlanPals: Flask app created")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -297,3 +298,8 @@ def delete_event(event_id:int):
     db.session.commit()
     flash("Event deleted.","success")
     return redirect(url_for("profile"))
+
+
+@app.route('/health')
+def health():
+    return "ok", 200
