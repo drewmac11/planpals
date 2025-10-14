@@ -1,22 +1,24 @@
-# PlanPals v2 (Particles)
+
+# PlanPals — Flat One-Folder Build
+
+Everything needed to run PlanPals in a single folder.
+
+## Highlights
+- **Profile tab** — edit/delete your events.
+- **Checklist with aligned boxes + 'Other' input.**
+- **Time-of-day support** — doors open, leave by, or "no specified end time."
+- **Schedule calendar** — mark unavailable times (with hours).
+- **Dry events** filter alcohol/weed items.
+- **Your glowing logo** integrated.
 
 ## Run locally
 ```bash
 python -m venv .venv
 . .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-export FLASK_ENV=production  # Windows: set FLASK_ENV=production
-python app.py
+flask run
 ```
 
 ## Deploy on Railway
-- Attach **PostgreSQL** plugin.
-- In Variables, set `PORT=8080` and ensure `DATABASE_URL` exists (Railway sets it).
-- Procfile already runs `python app.py`.
-
-## Notes
-- App auto-creates/migrates columns (`capacity`, `checklist`, `dry`) and tables (`RSVP`, `Availability`, `ChecklistItem`).
-- Schedules are set in `/schedule`.
-- Potential attendees appear on **Create Event** when you pick a date.
-- Organizer can tick checklist items on the event page.
-- “Dry” adds a badge and tooltip.
+- Uses root `app.py` (shim) and `Procfile: web: gunicorn app:app`
+- Automatically converts DATABASE_URL → postgresql+psycopg://
