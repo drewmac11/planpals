@@ -117,12 +117,16 @@ def create_app():
             print("DB failed, fallback to SQLite:", e)
             app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////tmp/planpals.db"
             db.session.remove()
-            try: db.engine.dispose()
-            except Exception: pass
-            db.create_all(); ensure_schema()
+            try:
+                db.engine.dispose()
+            except Exception:
+                pass
+            db.create_all()
+            ensure_schema()
 
     @app.get("/health")
-    def health(): return "ok", 200
+    def health():
+        return "ok", 200
 
     # Auth
     @app.route("/register", methods=["GET", "POST"])
@@ -154,7 +158,8 @@ def create_app():
     @app.route("/logout")
     @login_required
     def logout():
-        logout_user(); return redirect(url_for("index"))
+        logout_user()
+        return redirect(url_for("index"))
 
     # Schedule
     @app.route("/schedule", methods=["GET", "POST"])

@@ -1,6 +1,6 @@
-# PlanPals v3.6
+# PlanPals v3.7
 
-Includes: logout fix, Profile tab, aligned checkboxes, live checklist w/ Other, Dry flag, availability calendar, potential attendees preview, event start/end time.
+Includes: **fixed logout decorator**, Profile tab, aligned checkboxes + "Other", Dry flag, schedule/availability with potential attendees preview, event start/end time, and particle header.
 
 ## Railway Deploy
 Build: `pip install -r requirements.txt`
