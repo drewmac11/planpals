@@ -9,7 +9,9 @@ import os
 from extensions import db, login_manager
 from models import User, Event, RSVP
 
+
 def normalize_db_url(raw: str) -> str:
+    """Normalize Railway/Heroku-ish URLs to SQLAlchemy psycopg format and add sslmode when needed."""
     raw = (raw or "").strip().strip('"').strip("'")
     if raw.startswith("railwaypostgres://"):
         raw = raw.replace("railwaypostgres://", "postgres://", 1)
@@ -23,19 +25,35 @@ def normalize_db_url(raw: str) -> str:
         raw = raw.replace("postgresql://", "postgresql+psycopg://", 1)
     if raw.startswith("postgresql+psycopg://") and "sslmode=" not in raw:
         host = urlparse(raw).hostname or ""
+        # Require SSL for external hosts; Railway internal host doesn't need it
         if not host.endswith(".railway.internal"):
             raw += ("&" if "?" in raw else "?") + "sslmode=require"
     return raw
 
+
+def ensure_columns():
+    """Add new columns to 'event' if they don't exist (safe to run every boot)."""
+    db.session.execute(text(
+        "ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS capacity INTEGER"
+    ))
+    db.session.execute(text(
+        "ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS checklist TEXT DEFAULT ''"
+    ))
+    db.session.commit()
+    print("✅ ensured event.capacity & event.checklist exist")
+
+
 def create_app():
     app = Flask(__name__)
+
+    # Config
     env_url = os.environ.get("DATABASE_URL", "sqlite:///planpals.db")
     db_url = normalize_db_url(env_url)
-
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-key")
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+    # Extensions
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = "login"
@@ -44,22 +62,11 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
+    # Create tables and self-heal columns
     with app.app_context():
         try:
             db.create_all()
-from sqlalchemy import text
-
-# --- auto-add new columns if missing ---
-with app.app_context():
-    try:
-        db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS capacity INTEGER"))
-        db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS checklist TEXT DEFAULT ''"))
-        db.session.commit()
-        print("✅ ensured event columns exist")
-    except Exception as e:
-        print("⚠️ failed to ensure columns:", e)
-# ----------------------------------------
-
+            ensure_columns()
             db.session.execute(text("SELECT 1"))
         except Exception as e:
             print("⚠️  Postgres connection failed, falling back to SQLite:", e)
@@ -70,6 +77,9 @@ with app.app_context():
             except Exception:
                 pass
             db.create_all()
+            ensure_columns()
+
+    # ------------ Routes ------------
 
     @app.get("/health")
     def health():
@@ -98,16 +108,19 @@ with app.app_context():
         if status not in ("yes", "no", "maybe"):
             flash("Invalid RSVP.", "error")
             return redirect(url_for("event_detail", event_id=event_id))
+
         e = Event.query.get_or_404(event_id)
-        if status == "yes" and e.is_full():
+        if status == "yes" and e.is_full() and not RSVP.query.filter_by(
+            event_id=event_id, user_id=current_user.id, status="yes"
+        ).first():
             flash("Sorry, this event is full.", "error")
             return redirect(url_for("event_detail", event_id=event_id))
+
         rec = RSVP.query.filter_by(event_id=event_id, user_id=current_user.id).first()
         if rec:
             rec.status = status
         else:
-            rec = RSVP(event_id=event_id, user_id=current_user.id, status=status)
-            db.session.add(rec)
+            db.session.add(RSVP(event_id=event_id, user_id=current_user.id, status=status))
         db.session.commit()
         flash("RSVP updated.", "success")
         return redirect(url_for("event_detail", event_id=event_id))
@@ -118,6 +131,7 @@ with app.app_context():
             name = request.form["name"].strip()
             email = request.form["email"].strip().lower()
             password = request.form["password"]
+
             if User.query.filter_by(email=email).first():
                 flash("Email already registered", "error")
             else:
@@ -151,7 +165,7 @@ with app.app_context():
     def create_event():
         if request.method == "POST":
             title = request.form["title"].strip()
-            date_str = request.form["date"]
+            date_str = request.form["date"].strip()
             desc = request.form["description"].strip()
 
             capacity_raw = request.form.get("capacity", "").strip()
@@ -174,15 +188,23 @@ with app.app_context():
                 flash("Invalid date format", "error")
                 return render_template("create.html")
 
-            e = Event(title=title, date=dt, description=desc, creator_id=current_user.id,
-                      capacity=cap, checklist=checklist_raw)
+            e = Event(
+                title=title,
+                date=dt,
+                description=desc,
+                creator_id=current_user.id,
+                capacity=cap,
+                checklist=checklist_raw,
+            )
             db.session.add(e)
             db.session.commit()
             flash("Event created!", "success")
             return redirect(url_for("event_detail", event_id=e.id))
+
         return render_template("create.html")
 
     return app
+
 
 if __name__ == "__main__":
     app = create_app()
