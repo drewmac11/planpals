@@ -1,24 +1,54 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% block content %}
-<h1 class="h1">Upcoming events</h1>
-<div class="grid">
-  {% for ev in events %}
-  <a class="card" href="{{ url_for('event_detail', event_id=ev.id) }}">
-    <div class="card-top">
-      <h2>{{ ev.title }}</h2>
-      {% if ev.dry %}<span class="pill green" title="No alcohol/weed">Dry</span>{% endif %}
+  <section class="section">
+    <div class="section-head">
+      <h2>Upcoming events</h2>
+      {% if current_user.is_authenticated %}
+        <a class="btn small" href="{{ url_for('create_event') }}">+ New event</a>
+      {% endif %}
     </div>
-    <p class="muted">{{ ev.date.strftime("%A, %b %d, %Y") }}{% if ev.doors_open_time %} @ {{ ev.doors_open_time.strftime("%H:%M") }}{% endif %}{% if not ev.no_specified_end_time and ev.leave_by_time %} – {{ ev.leave_by_time.strftime("%H:%M") }}{% else %} · no specified end time{% endif %}</p>
-    <p>{{ ev.description|default("No description", true) }}</p>
-    <div class="row wrap gap">
-      <span class="pill">Going: {{ summary[ev.id]["going"]|length }}</span>
-      <span class="pill">Maybe: {{ summary[ev.id]["maybe"]|length }}</span>
-      <span class="pill">No: {{ summary[ev.id]["no"]|length }}</span>
-      <span class="pill red" title="People with schedule conflicts">Busy: {{ summary[ev.id]["busy"]|length }}</span>
-    </div>
-  </a>
-  {% else %}
-  <p>No events yet. Create one!</p>
-  {% endfor %}
-</div>
+
+    {% if events_data %}
+      <div class="grid">
+        {% for e, yes_names, maybe_names, no_names, busy_names in events_data %}
+          <article class="card event">
+            <div class="date-badge">
+              <span class="m">{{ e.date.strftime('%b') }}</span>
+              <span class="d">{{ e.date.strftime('%d') }}</span>
+            </div>
+            <div class="card-body">
+              <h3><a class="title-link" href="{{ url_for('event_detail', event_id=e.id) }}">{{ e.title }}</a></h3>
+              <p class="muted">{{ e.date.strftime('%A, %B %d, %Y') }}{% if e.dry %} • <span class="dry" title="Dry: no alcohol/weed permitted">Dry</span>{% endif %}</p>
+              {% if e.description %}<p>{{ e.description }}</p>{% endif %}
+
+              <div class="muted small row-names">
+                <div><strong>Going:</strong> {% if yes_names %}{{ yes_names|join(', ') }}{% else %}<span class="muted">—</span>{% endif %}</div>
+                <div><strong>Maybe:</strong> {% if maybe_names %}{{ maybe_names|join(', ') }}{% else %}<span class="muted">—</span>{% endif %}</div>
+                <div><strong>No:</strong> {% if no_names %}{{ no_names|join(', ') }}{% else %}<span class="muted">—</span>{% endif %}</div>
+              </div>
+              <div class="muted small row-names">
+                <div><strong>Busy:</strong> {% if busy_names %}<span class="busy">{{ busy_names|join(', ') }}</span>{% else %}<span class="muted">—</span>{% endif %}</div>
+              </div>
+
+              <div class="muted small">
+                {% set yes, maybe, no = e.rsvp_counts() %}
+                <strong>{{ yes }}</strong> going{% if e.capacity %} / {{ e.capacity }} max{% endif %}
+                • <strong>{{ maybe }}</strong> maybe
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">
+        <h3>No events yet</h3>
+        <p>Create your first event and invite your friends.</p>
+        {% if current_user.is_authenticated %}
+          <a class="btn" href="{{ url_for('create_event') }}">Create event</a>
+        {% else %}
+          <a class="btn" href="{{ url_for('register') }}">Sign up to create one</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
 {% endblock %}
