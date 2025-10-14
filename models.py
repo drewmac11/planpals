@@ -41,18 +41,17 @@ class Event(db.Model):
     checklist_items = relationship("ChecklistItem", back_populates="event", cascade="all, delete-orphan")
 
     def time_window(self):
-    # Compute start/end datetimes for an event using date + optional times.
-    # Start: doors_open_time or 00:00
-    start_t = self.doors_open_time or time(0, 0)
+    # Compute start/end datetimes using date + optional times; robust to NULLs.
+    start_t = getattr(self, 'doors_open_time', None) or time(0, 0)
     dt_start = datetime.combine(self.date, start_t)
-    # End: leave_by_time, or if no_specified_end_time set, default to +4h, else same as start
-    if self.leave_by_time:
+    if getattr(self, 'leave_by_time', None):
         dt_end = datetime.combine(self.date, self.leave_by_time)
     elif getattr(self, 'no_specified_end_time', False):
         dt_end = dt_start + timedelta(hours=4)
     else:
         dt_end = dt_start
     return dt_start, dt_end
+        return dt_start, datetime.combine(self.date, self.leave_by_time)
 
 class RSVP(db.Model):
     __table_args__ = (UniqueConstraint("event_id","user_id", name="uq_event_user"),)
