@@ -18,4 +18,4 @@ if "DATABASE_URL" in os.environ:
     print("PlanPals: DATABASE_URL driver normalized",
           {"before": before.split('://')[0] + '://', "after": os.environ["DATABASE_URL"].split('://')[0] + '://'})
 
-from planpals.app import app
+from webapp import app
