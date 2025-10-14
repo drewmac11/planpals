@@ -106,7 +106,7 @@ def create_app():
         logout_user()
         return redirect(url_for("index"))
 
-    @app.route("/profile", methods=["GET", "POST'])
+    @app.route("/profile", methods=["GET", "POST"])
     @login_required
     def profile():
         if request.method == "POST":
@@ -135,7 +135,7 @@ def create_app():
             db.session.add(ChecklistItem(event_id=eid, label=lab))
         db.session.commit()
 
-    @app.route("/create", methods=["GET", "POST'])
+    @app.route("/create", methods=["GET", "POST"])
     @login_required
     def create_event():
         if request.method == "POST":
@@ -189,7 +189,7 @@ def create_app():
         items = ChecklistItem.query.filter_by(event_id=e.id).order_by(ChecklistItem.id.asc()).all()
         return render_template("event.html", e=e, yes=yes, maybe=maybe, no=no, my=my, items=items)
 
-    @app.route("/event/<int:event_id>/rsvp/<string:status>", methods=["POST'])
+    @app.route("/event/<int:event_id>/rsvp/<string:status>", methods=["POST"])
     @login_required
     def rsvp(event_id, status):
         if status not in ("yes","maybe","no"):
@@ -205,7 +205,7 @@ def create_app():
         db.session.commit()
         return redirect(url_for("event_detail", event_id=e.id))
 
-    @app.route("/event/<int:event_id>/toggle/<int:item_id>", methods=["POST'])
+    @app.route("/event/<int:event_id>/toggle/<int:item_id>", methods=["POST"])
     @login_required
     def toggle_item(event_id, item_id):
         e = Event.query.get_or_404(event_id)
@@ -217,7 +217,7 @@ def create_app():
         db.session.commit()
         return redirect(url_for("event_detail", event_id=e.id))
 
-    @app.route("/event/<int:event_id>/edit", methods=["GET","POST'])
+    @app.route("/event/<int:event_id>/edit", methods=["GET","POST"])
     @login_required
     def edit_event(event_id):
         e = Event.query.get_or_404(event_id)
@@ -241,7 +241,7 @@ def create_app():
             return redirect(url_for("event_detail", event_id=e.id))
         return render_template("edit.html", e=e)
 
-    @app.route("/event/<int:event_id>/delete", methods=["POST'])
+    @app.route("/event/<int:event_id>/delete", methods=["POST"])
     @login_required
     def delete_event(event_id):
         e = Event.query.get_or_404(event_id)
@@ -252,7 +252,7 @@ def create_app():
         flash("Event deleted.", "success")
         return redirect(url_for("profile"))
 
-    @app.route("/schedule", methods=["GET","POST'])
+    @app.route("/schedule", methods=["GET","POST"])
     @login_required
     def schedule():
         if request.method == "POST":
@@ -272,7 +272,7 @@ def create_app():
         blocks = BusyBlock.query.filter_by(user_id=current_user.id).order_by(BusyBlock.start_date.asc()).all()
         return render_template("schedule.html", blocks=blocks)
 
-    @app.route("/schedule/<int:block_id>/delete", methods=["POST'])
+    @app.route("/schedule/<int:block_id>/delete", methods=["POST"])
     @login_required
     def delete_block(block_id):
         bb = BusyBlock.query.filter_by(id=block_id, user_id=current_user.id).first_or_404()
