@@ -41,11 +41,18 @@ class Event(db.Model):
     checklist_items = relationship("ChecklistItem", back_populates="event", cascade="all, delete-orphan")
 
     def time_window(self):
-        """Return (start_dt, end_dt) for overlap checks; if no end, end_dt is None (whole day)."""
-        dt_start = datetime.combine(self.date, self.doors_open_time or time(0,0))
-        if self.no_specified_end_time or self.leave_by_time is None:
-            return dt_start, None
-        return dt_start, datetime.combine(self.date, self.leave_by_time)
+    # Compute start/end datetimes for an event using date + optional times.
+    # Start: doors_open_time or 00:00
+    start_t = self.doors_open_time or time(0, 0)
+    dt_start = datetime.combine(self.date, start_t)
+    # End: leave_by_time, or if no_specified_end_time set, default to +4h, else same as start
+    if self.leave_by_time:
+        dt_end = datetime.combine(self.date, self.leave_by_time)
+    elif getattr(self, 'no_specified_end_time', False):
+        dt_end = dt_start + timedelta(hours=4)
+    else:
+        dt_end = dt_start
+    return dt_start, dt_end
 
 class RSVP(db.Model):
     __table_args__ = (UniqueConstraint("event_id","user_id", name="uq_event_user"),)
