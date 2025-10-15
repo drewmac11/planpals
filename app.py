@@ -140,6 +140,58 @@ def create_app():
         except Exception as e:
             return ("not-ready: " + str(e)), 503
 
+    @app.route("/profile", methods=["GET","POST"])
+    @login_required
+    def profile():
+        # Change display name
+        if request.method == "POST":
+            new_name = request.form.get("name","").strip()
+            if new_name:
+                current_user.name = new_name
+                db.session.commit()
+                flash("Profile updated", "success")
+            else:
+                flash("Name cannot be empty", "error")
+        # List current user's events
+        my_events = Event.query.filter_by(creator_id=current_user.id).order_by(Event.date.desc()).all()
+        return render_template("profile.html", my_events=my_events)
+
+    @app.route("/event/<int:event_id>/edit", methods=["GET","POST"])
+    @login_required
+    def edit_event(event_id):
+        e = Event.query.get_or_404(event_id)
+        if e.creator_id != current_user.id:
+            flash("You can only edit your own events.", "error")
+            return redirect(url_for("index"))
+        if request.method == "POST":
+            title = request.form["title"].strip()
+            date_str = request.form["date"]
+            desc = request.form.get("description","").strip()
+            try:
+                dt = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                flash("Invalid date format", "error")
+                return render_template("edit.html", event=e)
+            e.title = title
+            e.date = dt
+            e.description = desc
+            db.session.commit()
+            flash("Event updated", "success")
+            return redirect(url_for("profile"))
+        return render_template("edit.html", event=e)
+
+    @app.post("/event/<int:event_id>/delete")
+    @login_required
+    def delete_event(event_id):
+        e = Event.query.get_or_404(event_id)
+        if e.creator_id != current_user.id:
+            flash("You can only delete your own events.", "error")
+            return redirect(url_for("index"))
+        db.session.delete(e)
+        db.session.commit()
+        flash("Event deleted", "success")
+        return redirect(url_for("profile"))
+
     return app
 
 if __name__ == "__main__":

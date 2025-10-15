@@ -76,3 +76,15 @@ input:focus,textarea:focus{outline:2px solid rgba(124,58,237,.35);border-color:v
 
 /* Footer */
 .site-footer{text-align:center;color:var(--muted);padding:24px}
+
+/* Hero canvas layering */
+.hero { position: relative; overflow: hidden; min-height: 260px; }
+#hero-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events: none; opacity: 0.7; }
+
+
+/* Profile & event list */
+.event-list { list-style: none; padding: 0; margin: 0; }
+.event-item { display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0; border-bottom:1px solid rgba(0,0,0,0.06); }
+.event-item:last-child { border-bottom:none; }
+.btn.small { padding: 0.3rem 0.6rem; font-size: 0.9rem; }
+.btn.danger { background: #c64040; color: #fff; }
