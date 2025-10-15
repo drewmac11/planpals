@@ -128,6 +128,18 @@ def create_app():
             return redirect(url_for("index"))
         return render_template("create.html")
 
+    @app.route("/healthz")
+    def healthz():
+        return "ok", 200
+
+    @app.route("/readyz")
+    def readyz():
+        try:
+            db.session.execute(text("SELECT 1"))
+            return "ready", 200
+        except Exception as e:
+            return ("not-ready: " + str(e)), 503
+
     return app
 
 if __name__ == "__main__":
