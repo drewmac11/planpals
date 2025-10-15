@@ -1,38 +1,39 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="hero">
-  <h1>Upcoming Events</h1>
-  {% if current_user.is_authenticated %}
-  <a class="btn" href="{{ url_for('create_event') }}">Create Event</a>
-  {% else %}
-  <a class="btn" href="{{ url_for('register') }}">Join PlanPals</a>
-  {% endif %}
-</div>
+  <section class="section">
+    <div class="section-head">
+      <h2>Upcoming events</h2>
+      {% if current_user.is_authenticated %}
+        <a class="btn small" href="{{ url_for('create_event') }}">+ New event</a>
+      {% endif %}
+    </div>
 
-{% if events %}
-<div class="grid">
-  {% for e in events %}
-  <div class="card">
-    <h3>{{ e.title }}</h3>
-    <div class="event-meta">
-      {{ e.date.strftime('%a, %b %d, %Y') if e.date else 'Date TBA' }}
-      {% if e.start_time %} • {{ e.start_time.strftime('%H:%M') }}{% endif %}
-      {% if e.end_time %} – {{ e.end_time.strftime('%H:%M') }}{% endif %}
-      {% if e.capacity %} • cap {{ e.capacity }}{% endif %}
-      {% if e.dry %} • Dry{% endif %}
-    </div>
-    <p>{{ e.description or '' }}</p>
-    {% if current_user.is_authenticated %}
-    <div class="centered" style="justify-content:flex-start">
-      <a class="btn small" href="{{ url_for('rsvp', event_id=e.id, status='yes') }}">Going</a>
-      <a class="btn small alt" href="{{ url_for('rsvp', event_id=e.id, status='maybe') }}">Maybe</a>
-      <a class="btn small" style="background:#444" href="{{ url_for('rsvp', event_id=e.id, status='no') }}">No</a>
-    </div>
+    {% if events %}
+      <div class="grid">
+        {% for e in events %}
+          <article class="card event">
+            <div class="date-badge">
+              <span class="m">{{ e.date.strftime('%b') }}</span>
+              <span class="d">{{ e.date.strftime('%d') }}</span>
+            </div>
+            <div class="card-body">
+              <h3>{{ e.title }}</h3>
+              <p class="muted">{{ e.date.strftime('%A, %B %d, %Y') }}</p>
+              {% if e.description %}<p>{{ e.description }}</p>{% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">
+        <h3>No events yet</h3>
+        <p>Create your first event and invite your friends.</p>
+        {% if current_user.is_authenticated %}
+          <a class="btn" href="{{ url_for('create_event') }}">Create event</a>
+        {% else %}
+          <a class="btn" href="{{ url_for('register') }}">Sign up to create one</a>
+        {% endif %}
+      </div>
     {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% else %}
-<div class="card"><em>No events yet. Create the first one!</em></div>
-{% endif %}
+  </section>
 {% endblock %}

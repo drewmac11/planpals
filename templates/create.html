@@ -1,28 +1,19 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="card" style="max-width:720px;margin:0 auto">
-  <h2 style="margin-top:0">Create Event</h2>
-  <form method="post">
+<section class="auth">
+  <h2>Create an event</h2>
+  <form method="post" class="form">
+    <label>Title</label>
+    <input name="title" placeholder="Board game night" required />
     <div class="row">
-      <div><label class="label">Title</label><input required name="title"></div>
-      <div><label class="label">Date</label><input type="date" name="date" required></div>
-    </div>
-    <div class="row">
-      <div><label class="label">Start Time</label><input type="time" name="start_time"></div>
-      <div><label class="label">End Time</label><input type="time" name="end_time"></div>
-    </div>
-    <div class="row">
-      <div><label class="label">Capacity</label><input type="number" min="1" name="capacity" required></div>
-      <div><label class="label">Dry Event</label>
-        <select name="dry">
-          <option value="0">No</option>
-          <option value="1">Yes (no alcohol/weed)</option>
-        </select>
+      <div class="col">
+        <label>Date</label>
+        <input name="date" type="date" required />
       </div>
     </div>
-    <div><label class="label">Checklist (comma separated)</label><input name="checklist" placeholder="chairs, snacks, cards"></div>
-    <div><label class="label">Description</label><textarea name="description" rows="3"></textarea></div>
-    <div style="margin-top:12px"><button class="btn">Save</button></div>
+    <label>Description <span class="muted small">(optional)</span></label>
+    <textarea name="description" rows="4" placeholder="Snacks at 7, games at 7:30."></textarea>
+    <button class="btn wide">Create event</button>
   </form>
-</div>
+</section>
 {% endblock %}

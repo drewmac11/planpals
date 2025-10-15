@@ -1,46 +1,53 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PlanPals</title>
+  <meta name="theme-color" content="#7c3aed" />
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <nav class="nav">
-    <div class="left">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" class="logo">
-      <div class="brand"><span class="plan">Plan</span><span class="pals">Pals</span></div>
-      <a href="{{ url_for('index') }}">Events</a>
-      {% if current_user.is_authenticated %}
-      <a href="{{ url_for('create_event') }}">Create</a>
-      <a href="{{ url_for('profile') }}">Profile</a>
-      {% endif %}
-      <a href="/healthz" title="health">health</a>
+  <header class="site-header">
+    <div class="nav">
+      <a href="{{ url_for('index') }}" class="brand">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="PlanPals" class="logo" />
+      </a>
+      <div class="links">
+        {% if current_user.is_authenticated %}
+          <a class="btn ghost" href="{{ url_for('create_event') }}">Create Event</a>
+          <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
+        {% else %}
+          <a class="btn ghost" href="{{ url_for('login') }}">Log in</a>
+          <a class="btn" href="{{ url_for('register') }}">Sign up</a>
+        {% endif %}
+      </div>
     </div>
-    <div class="right">
+
+    <div class="hero">
+      <h1>PlanPals</h1>
+      <p class="tagline">So all friends can attend!</p>
       {% if current_user.is_authenticated %}
-      <span class="label">Hi, {{ current_user.name.split(' ')[0] }}</span>
-      <a class="btn small" href="{{ url_for('logout') }}">Logout</a>
+        <a class="btn large" href="{{ url_for('create_event') }}">+ Create an event</a>
       {% else %}
-      <a class="btn small" href="{{ url_for('login') }}">Login</a>
-      <a class="btn small alt" href="{{ url_for('register') }}">Sign up</a>
+        <a class="btn large" href="{{ url_for('register') }}">Get started — it’s free</a>
       {% endif %}
     </div>
-  </nav>
+    <div class="gradient"></div>
+  </header>
 
-  <div class="container">
+  <main class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-        <div class="msg {{ 'ok' if category=='success' else 'err' }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
+      {% for cat, msg in messages %}
+        <div class="flash {{cat}}"><span>{{ msg }}</span></div>
+      {% endfor %}
     {% endwith %}
-
     {% block content %}{% endblock %}
-  </div>
+  </main>
 
-  <div class="footer">© PlanPals</div>
+  <footer class="site-footer">
+    <p>© {{ 2025 }} PlanPals • Built for friends</p>
+  </footer>
 </body>
 </html>
