@@ -88,3 +88,8 @@ input:focus,textarea:focus{outline:2px solid rgba(124,58,237,.35);border-color:v
 .event-item:last-child { border-bottom:none; }
 .btn.small { padding: 0.3rem 0.6rem; font-size: 0.9rem; }
 .btn.danger { background: #c64040; color: #fff; }
+
+.brand-logo{height:36px; display:block;}
+header .brand{display:flex; align-items:center;}
+
+.badge{display:inline-block;padding:.1rem .4rem;border-radius:.4rem;background:rgba(90,120,200,.2);border:1px solid rgba(90,120,200,.5);}

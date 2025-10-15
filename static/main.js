@@ -12,7 +12,7 @@
   window.addEventListener('resize', resize);
   resize();
 
-  const COUNT = 60;
+  const COUNT = 40;
   function rand(min,max){ return Math.random()*(max-min)+min; }
   function spawn(){
     particles = [];
@@ -20,8 +20,8 @@
       particles.push({
         x: rand(0,w),
         y: rand(0,h),
-        vx: rand(-0.3,0.3),
-        vy: rand(-0.3,0.3),
+        vx: rand(-0.12,0.12),
+        vy: rand(-0.12,0.12),
         r: rand(1.2,3.2),
       });
     }
@@ -42,7 +42,7 @@
       const dx = mouse.x - p.x;
       const dy = mouse.y - p.y;
       const d2 = dx*dx + dy*dy;
-      const force = Math.min(0.002, 60/(d2+10000));
+      const force = Math.min(0.001, 30/(d2+20000));
       p.vx += dx*force;
       p.vy += dy*force;
 

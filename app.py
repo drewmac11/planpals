@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
 from datetime import datetime
-from sqlalchemy import text
+from sqlalchemy import text, Boolean
 from urllib.parse import urlparse
 import os
 
@@ -55,6 +55,28 @@ def create_app():
     with app.app_context():
         try:
             db.create_all()
+
+        # --- lightweight schema migrations ---
+        try:
+            with app.app_context():
+                # Add new columns to event if they don't exist
+                db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS open_time TIME"))
+                db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS close_time TIME"))
+                db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS dry BOOLEAN DEFAULT FALSE"))
+                # Availability table
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS availability (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+                        day INTEGER NOT NULL,
+                        start_time TIME NOT NULL,
+                        end_time TIME NOT NULL
+                    )
+                """))
+                db.session.commit()
+        except Exception as e:
+            app.logger.error(f"Schema migration error: {e}")
+
             db.session.execute(text("SELECT 1"))
         except Exception as e:
             print("⚠️  Postgres connection failed, falling back to SQLite:", e)
@@ -65,6 +87,28 @@ def create_app():
             except Exception:
                 pass
             db.create_all()
+
+        # --- lightweight schema migrations ---
+        try:
+            with app.app_context():
+                # Add new columns to event if they don't exist
+                db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS open_time TIME"))
+                db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS close_time TIME"))
+                db.session.execute(text("ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS dry BOOLEAN DEFAULT FALSE"))
+                # Availability table
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS availability (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+                        day INTEGER NOT NULL,
+                        start_time TIME NOT NULL,
+                        end_time TIME NOT NULL
+                    )
+                """))
+                db.session.commit()
+        except Exception as e:
+            app.logger.error(f"Schema migration error: {e}")
+
 
     @app.get("/health")
     def health():
@@ -121,7 +165,18 @@ def create_app():
             except ValueError:
                 flash("Invalid date format", "error")
                 return render_template("create.html")
-            e = Event(title=title, date=dt, description=desc, creator_id=current_user.id)
+            otp = datetime.strptime(open_time_str, "%H:%M").time() if open_time_str else None
+        ctp = datetime.strptime(close_time_str, "%H:%M").time() if close_time_str else None
+        e = Event(title=title, date=dt, description=desc, creator_id=current_user.id)
+        # direct SQL updates to new columns without redefining model
+        db.session.add(e)
+        db.session.flush()
+        if otp is not None:
+            db.session.execute(text("UPDATE event SET open_time=:ot WHERE id=:id"), {"ot": otp, "id": e.id})
+        if ctp is not None:
+            db.session.execute(text("UPDATE event SET close_time=:ct WHERE id=:id"), {"ct": ctp, "id": e.id})
+        db.session.execute(text("UPDATE event SET dry=:d WHERE id=:id"), {"d": dry_flag, "id": e.id})
+        
             db.session.add(e)
             db.session.commit()
             flash("Event created!", "success")
@@ -191,6 +246,36 @@ def create_app():
         db.session.commit()
         flash("Event deleted", "success")
         return redirect(url_for("profile"))
+
+    @app.route("/schedule", methods=["GET","POST"])
+    @login_required
+    def schedule():
+        if request.method == "POST":
+            day = int(request.form["day"])
+            start = datetime.strptime(request.form["start"], "%H:%M").time()
+            end = datetime.strptime(request.form["end"], "%H:%M").time()
+            db.session.execute(text("INSERT INTO availability (user_id, day, start_time, end_time) VALUES (:u,:d,:s,:e)"),
+                               {"u": current_user.id, "d": day, "s": start, "e": end})
+            db.session.commit()
+            flash("Added unavailable slot", "success")
+            return redirect(url_for("schedule"))
+        rows = db.session.execute(text("SELECT id, day, start_time, end_time FROM availability WHERE user_id=:u ORDER BY day, start_time"),
+                                  {"u": current_user.id}).mappings().all()
+        class Row: pass
+        slots = []
+        for r in rows:
+            obj = Row()
+            obj.id = r["id"]; obj.day = r["day"]; obj.start_time = r["start_time"]; obj.end_time = r["end_time"]
+            slots.append(obj)
+        return render_template("schedule.html", slots=slots)
+
+    @app.post("/schedule/delete/<int:slot_id>")
+    @login_required
+    def delete_slot(slot_id):
+        db.session.execute(text("DELETE FROM availability WHERE id=:i AND user_id=:u"), {"i": slot_id, "u": current_user.id})
+        db.session.commit()
+        flash("Removed slot", "success")
+        return redirect(url_for("schedule"))
 
     return app
 

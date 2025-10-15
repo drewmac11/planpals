@@ -15,3 +15,11 @@ class Event(db.Model):
     date = db.Column(db.Date, nullable=False, index=True)
     description = db.Column(db.Text, default='')
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+
+class Availability(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    day = db.Column(db.Integer, nullable=False)  # 0=Mon .. 6=Sun
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
