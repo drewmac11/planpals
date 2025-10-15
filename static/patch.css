@@ -1,0 +1,27 @@
+
+/* Hero section */
+.hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  padding: 3rem 1rem;
+  background: radial-gradient(1200px 600px at 50% 30%, rgba(0,0,0,0.18), rgba(0,0,0,0.58));
+}
+.hero .hero-inner {
+  position: relative;
+  text-align: center;
+  z-index: 2;
+}
+.hero h1 {
+  margin: .4rem 0 0 0;
+  font-size: clamp(1.8rem, 4.2vw, 3rem);
+  letter-spacing: .5px;
+}
+.hero p.tag {
+  margin-top: .2rem;
+  opacity: .85;
+}
+#hero-canvas { filter: blur(22px) saturate(1.1); }
+.brand-logo { height: 40px; display:block; }

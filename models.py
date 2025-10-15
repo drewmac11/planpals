@@ -1,47 +1,25 @@
-from sqlalchemy import func, UniqueConstraint
+from sqlalchemy import func
 from flask_login import UserMixin
 from extensions import db
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, server_default=func.now())
+
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     date = db.Column(db.Date, nullable=False, index=True)
-    start_time = db.Column(db.Time, nullable=False)
-    end_time = db.Column(db.Time, nullable=True)
     description = db.Column(db.Text, default='')
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    capacity = db.Column(db.Integer, nullable=False)
-    checklist = db.Column(db.Text, default='')
-    dry = db.Column(db.Boolean, default=False)
-    def rsvp_counts(self):
-        yes = RSVP.query.filter_by(event_id=self.id, status='yes').count()
-        maybe = RSVP.query.filter_by(event_id=self.id, status='maybe').count()
-        no = RSVP.query.filter_by(event_id=self.id, status='no').count()
-        return yes, maybe, no
-    def is_full(self):
-        if self.capacity and self.capacity > 0:
-            yes = RSVP.query.filter_by(event_id=self.id, status='yes').count()
-            return yes >= self.capacity
-        return False
-class RSVP(db.Model):
-    __table_args__ = (UniqueConstraint('user_id', 'event_id', name='uniq_user_event'),)
+
+
+class Availability(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False, index=True)
-    status = db.Column(db.String(10), nullable=False, default='yes')
-    updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
-class ChecklistItem(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False, index=True)
-    label = db.Column(db.String(200), nullable=False)
-    checked = db.Column(db.Boolean, default=False)
-class Unavailability(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    start_dt = db.Column(db.DateTime, nullable=False, index=True)
-    end_dt = db.Column(db.DateTime, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    day = db.Column(db.Integer, nullable=False)  # 0=Mon .. 6=Sun
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
