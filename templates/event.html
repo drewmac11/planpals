@@ -11,7 +11,6 @@
     {% if e.capacity %} • Max: {{ e.capacity }}{% endif %}
   </p>
   <p>{{ e.description }}</p>
-
   <h3>Checklist</h3>
   {% if items %}
     <ul>
@@ -31,7 +30,6 @@
   {% else %}
     <p class="muted">No items yet.</p>
   {% endif %}
-
   <h3>RSVP</h3>
   <p>Going: {{ yes }} • Maybe: {{ maybe }} • No: {{ no }}</p>
   {% if current_user.is_authenticated %}

@@ -1,6 +1,6 @@
 import os
-from datetime import date, time, datetime
-from flask import Flask, render_template, request, redirect, url_for, flash
+from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from sqlalchemy import func, text
@@ -57,24 +57,36 @@ def create_app():
         except Exception:
             db.session.rollback()
 
-    @app.context_processor
-    def inject_now():
-        return {"now": datetime.utcnow()}
-
     @app.route("/healthz")
     def healthz():
         return "ok", 200
 
+    @app.route("/readyz")
+    def readyz():
+        try:
+            db.session.execute(text("SELECT 1"))
+            return "ready", 200
+        except Exception as e:
+            return ("db not ready", 503)
+
+    @app.context_processor
+    def inject_now():
+        return {"now": datetime.utcnow()}
+
     @app.route("/")
     def index():
-        events = Event.query.order_by(Event.date.asc().nullslast()).all()
+        try:
+            events = Event.query.order_by(Event.date.asc().nullslast()).all()
+        except Exception as e:
+            # Return a lightweight page so proxy gets 200 and you can open the app
+            return render_template("minimal.html", msg="Database not reachable yet."), 200
         enriched = []
         for e in events:
             yes_names, maybe_names, no_names = e.rsvp_name_lists()
             enriched.append((e, yes_names, maybe_names, no_names))
         return render_template("index.html", events_data=enriched)
 
-    @app.route("/register", methods=["GET", "POST"])  # fixed quotes
+    @app.route("/register", methods=["GET", "POST"])
     def register():
         if request.method == "POST":
             name = request.form.get("name", "").strip() or "John Doe"
