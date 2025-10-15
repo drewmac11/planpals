@@ -17,6 +17,7 @@
       <div class="links">
         {% if current_user.is_authenticated %}
           <a class="btn ghost" href="{{ url_for('create_event') }}">Create Event</a>
+		  <a href="{{ url_for('profile') }}">Profile</a>
           <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
         {% else %}
           <a class="btn ghost" href="{{ url_for('login') }}">Log in</a>

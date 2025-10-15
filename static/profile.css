@@ -1,0 +1,33 @@
+/* Optional small styles for Profile & Edit pages */
+.profile-name-form {
+  margin: 1rem 0; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap;
+}
+.profile-name-form input[type="text"] {
+  padding: .5rem .7rem; border-radius: 10px; border: 1px solid rgba(0,0,0,.15);
+  background: rgba(255,255,255,.8);
+}
+
+.pp-event-list { list-style: none; padding: 0; margin: 0.5rem 0 2rem; }
+.pp-event-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.75rem 1rem; border: 1px solid rgba(0,0,0,.1); border-radius: 10px; margin-bottom: 0.75rem;
+  background: rgba(255,255,255,.6);
+}
+.pp-event-sub { opacity: .8; }
+.pp-event-actions { display: flex; gap: .4rem; }
+.btn { padding: .45rem .8rem; border-radius: 8px; text-decoration: none; background: #ececff; border: none; cursor: pointer; }
+.btn:hover { background: #dcdcfe; }
+.btn-danger { background: #ffebee; }
+.btn-danger:hover { background: #ffd2d8; }
+.btn-primary { background: #8b5cf6; color: white; }
+.btn-primary:hover { background: #7c3aed; }
+
+.pp-edit-form { max-width: 520px; margin: 1rem 0; display: grid; gap: 0.6rem; }
+.pp-edit-form input[type="text"],
+.pp-edit-form input[type="date"],
+.pp-edit-form input[type="number"],
+.pp-edit-form textarea {
+  width: 100%; padding: .6rem .7rem; border-radius: 10px; border: 1px solid rgba(0,0,0,.15);
+  background: rgba(255,255,255,.7);
+}
+.pp-form-actions { display: flex; gap: .5rem; margin-top: .4rem; }

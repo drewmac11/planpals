@@ -1,10 +1,11 @@
-
 {% extends "base.html" %}
 {% block content %}
 
+<link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
+
 <h2>Edit Event</h2>
 
-<form method="POST" action="{{ url_for('edit_event', event_id=event.id) }}" class="edit-form">
+<form method="POST" action="{{ url_for('edit_event', event_id=event.id) }}" class="pp-edit-form">
   <label for="title">Title</label>
   <input id="title" name="title" type="text" value="{{ event.title }}" required>
 
@@ -19,26 +20,10 @@
     <input id="capacity" name="capacity" type="number" min="1" value="{{ event.capacity }}">
   {% endif %}
 
-  <div class="form-actions">
+  <div class="pp-form-actions">
     <a class="btn" href="{{ url_for('profile') }}">Cancel</a>
     <button class="btn btn-primary" type="submit">Save Changes</button>
   </div>
 </form>
-
-<style>
-.edit-form { max-width: 520px; margin: 1rem 0; display: grid; gap: 0.6rem; }
-.edit-form input[type="text"],
-.edit-form input[type="date"],
-.edit-form input[type="number"],
-.edit-form textarea {
-  width: 100%; padding: .6rem .7rem; border-radius: 10px; border: 1px solid rgba(0,0,0,.15);
-  background: rgba(255,255,255,.7);
-}
-.form-actions { display: flex; gap: .5rem; margin-top: .4rem; }
-.btn { padding: .5rem .9rem; border-radius: 8px; text-decoration: none; background: #ececff; border: none; cursor: pointer; }
-.btn:hover { background: #dcdcfe; }
-.btn-primary { background: #8b5cf6; color: white; }
-.btn-primary:hover { background: #7c3aed; }
-</style>
 
 {% endblock %}
