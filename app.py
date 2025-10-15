@@ -1,140 +1,136 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import login_user, login_required, logout_user, current_user
 from datetime import datetime
+from sqlalchemy import text
+from urllib.parse import urlparse
 import os
 
-app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "supersecretkey")
+from extensions import db, login_manager
+from models import User, Event
 
-db_url = os.environ.get("DATABASE_URL", "sqlite:///planpals.db")
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+def normalize_db_url(raw: str) -> str:
+    raw = (raw or "").strip().strip('"').strip("'")
 
-app.config["SQLALCHEMY_DATABASE_URI"] = db_url
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db = SQLAlchemy(app)
+    # Fix common mistakes
+    if raw.startswith("railwaypostgres://"):
+        raw = raw.replace("railwaypostgres://", "postgres://", 1)
+    if raw.startswith("railwaypostgresql://"):
+        raw = raw.replace("railwaypostgresql://", "postgresql://", 1)
 
-login_manager = LoginManager(app)
-login_manager.login_view = "login"
+    # Force psycopg3 driver
+    if raw.startswith("postgresql+psycopg2://"):
+        raw = raw.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
+    if raw.startswith("postgres://"):
+        raw = raw.replace("postgres://", "postgresql+psycopg://", 1)
+    if raw.startswith("postgresql://"):
+        raw = raw.replace("postgresql://", "postgresql+psycopg://", 1)
 
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(150), nullable=False)
+    # Add SSL only for public hosts
+    if raw.startswith("postgresql+psycopg://") and "sslmode=" not in raw:
+        host = urlparse(raw).hostname or ""
+        if not host.endswith(".railway.internal"):
+            raw += ("&" if "?" in raw else "?") + "sslmode=require"
+    return raw
 
-class Event(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text, default="")
-    date = db.Column(db.Date, nullable=False)
-    start_time = db.Column(db.Time, nullable=True)
-    end_time = db.Column(db.Time, nullable=True)
-    dry_gathering = db.Column(db.Boolean, default=False)
-    creator_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+def create_app():
+    app = Flask(__name__)
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+    env_url = os.environ.get("DATABASE_URL", "sqlite:///planpals.db")
+    db_url = normalize_db_url(env_url)
 
-with app.app_context():
-    try:
-        db.create_all()
-    except Exception as e:
-        print("DB init error:", e)
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-key")
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-@app.route("/")
-def index():
-    events = Event.query.order_by(Event.date.asc()).all()
-    return render_template("index.html", events=events)
+    db.init_app(app)
+    login_manager.init_app(app)
+    login_manager.login_view = "login"
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "POST":
-        name = request.form.get("name","").strip()
-        email = request.form.get("email","").strip().lower()
-        password = request.form.get("password","")
-        if not name or not email or not password:
-            flash("All fields required.")
-            return redirect(url_for("register"))
-        if User.query.filter_by(email=email).first():
-            flash("Email already registered.")
-            return redirect(url_for("register"))
-        u = User(name=name, email=email, password=password)
-        db.session.add(u)
-        db.session.commit()
-        flash("Registration successful. Please log in.")
-        return redirect(url_for("login"))
-    return render_template("register.html")
+    @login_manager.user_loader
+    def load_user(user_id):
+        # Simple for now; SQLAlchemy 2.x warns about Query.get but fine
+        return User.query.get(int(user_id))
 
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        email = request.form.get("email","").strip().lower()
-        password = request.form.get("password","")
-        u = User.query.filter_by(email=email).first()
-        if u and u.password == password:
-            login_user(u)
-            return redirect(url_for("index"))
-        flash("Invalid credentials.")
-    return render_template("login.html")
+    with app.app_context():
+        try:
+            db.create_all()
+            db.session.execute(text("SELECT 1"))
+        except Exception as e:
+            print("⚠️  Postgres connection failed, falling back to SQLite:", e)
+            app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////tmp/planpals.db"
+            db.session.remove()
+            try:
+                db.engine.dispose()
+            except Exception:
+                pass
+            db.create_all()
 
-@app.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    flash("Logged out.")
-    return redirect(url_for("index"))
+    @app.get("/health")
+    def health():
+        return "ok", 200
 
-@app.route("/create", methods=["GET", "POST"])
-@login_required
-def create():
-    if request.method == "POST":
-        title = request.form.get("title","").strip()
-        description = request.form.get("description","").strip()
-        date_str = request.form.get("date","")
-        start_time = request.form.get("start_time") or None
-        end_time = request.form.get("end_time") or None
-        dry = True if request.form.get("dry_gathering") else False
+    @app.route("/")
+    def index():
+        events = Event.query.order_by(Event.date.asc()).all()
+        return render_template("index.html", events=events)
 
-        if not title or not date_str:
-            flash("Title and Date are required.")
-            return redirect(url_for("create"))
-        date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        st = datetime.strptime(start_time, "%H:%M").time() if start_time else None
-        et = datetime.strptime(end_time, "%H:%M").time() if end_time else None
+    @app.route("/register", methods=["GET", "POST"])
+    def register():
+        if request.method == "POST":
+            name = request.form["name"].strip()
+            email = request.form["email"].strip().lower()
+            password = request.form["password"]
+            if User.query.filter_by(email=email).first():
+                flash("Email already registered", "error")
+            else:
+                user = User(name=name, email=email, password_hash=generate_password_hash(password))
+                db.session.add(user)
+                db.session.commit()
+                flash("Registration successful! Please log in.", "success")
+                return redirect(url_for("login"))
+        return render_template("register.html")
 
-        ev = Event(
-            title=title,
-            description=description,
-            date=date,
-            start_time=st,
-            end_time=et,
-            dry_gathering=dry,
-            creator_id=current_user.id
-        )
-        db.session.add(ev)
-        db.session.commit()
-        flash("Event created!")
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if request.method == "POST":
+            email = request.form["email"].strip().lower()
+            password = request.form["password"]
+            user = User.query.filter_by(email=email).first()
+            if user and check_password_hash(user.password_hash, password):
+                login_user(user)
+                return redirect(url_for("index"))
+            flash("Invalid credentials", "error")
+        return render_template("login.html")
+
+    @app.route("/logout")
+    @login_required
+    def logout():
+        logout_user()
         return redirect(url_for("index"))
-    return render_template("create.html")
 
-@app.route("/profile")
-@login_required
-def profile():
-    my_events = Event.query.filter_by(creator_id=current_user.id).all()
-    return render_template("profile.html", events=my_events)
+    @app.route("/create", methods=["GET", "POST"])
+    @login_required
+    def create_event():
+        if request.method == "POST":
+            title = request.form["title"].strip()
+            date_str = request.form["date"]
+            desc = request.form["description"].strip()
+            try:
+                dt = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                flash("Invalid date format", "error")
+                return render_template("create.html")
+            e = Event(title=title, date=dt, description=desc, creator_id=current_user.id)
+            db.session.add(e)
+            db.session.commit()
+            flash("Event created!", "success")
+            return redirect(url_for("index"))
+        return render_template("create.html")
 
-@app.route("/healthz")
-def healthz():
-    return "OK", 200
-
-@app.route("/readyz")
-def readyz():
-    return "READY", 200
+    return app
 
 if __name__ == "__main__":
+    app = create_app()
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)

@@ -17,8 +17,6 @@
       <div class="links">
         {% if current_user.is_authenticated %}
           <a class="btn ghost" href="{{ url_for('create_event') }}">Create Event</a>
-          <a class="btn ghost" href="{{ url_for('profile') }}">Profile</a>
-          <a class="btn ghost" href="{{ url_for('schedule') }}">Update Schedule</a>
           <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
         {% else %}
           <a class="btn ghost" href="{{ url_for('login') }}">Log in</a>
@@ -28,7 +26,6 @@
     </div>
 
     <div class="hero">
-      <canvas id="hero-canvas" aria-hidden="true"></canvas>
       <h1>PlanPals</h1>
       <p class="tagline">So all friends can attend!</p>
       {% if current_user.is_authenticated %}
@@ -52,6 +49,5 @@
   <footer class="site-footer">
     <p>© {{ 2025 }} PlanPals • Built for friends</p>
   </footer>
-  <script src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
 </html>
