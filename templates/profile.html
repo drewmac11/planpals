@@ -1,0 +1,55 @@
+
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Your Profile</h2>
+
+<form method="POST" action="{{ url_for('profile') }}" style="margin: 1rem 0;">
+  <label for="name">Display name</label><br>
+  <input type="text" id="name" name="name" value="{{ current_user.name }}" required>
+  <button type="submit">Update Name</button>
+</form>
+
+<hr>
+
+<h3>Your Events</h3>
+{% if events %}
+  <ul class="event-list">
+    {% for e in events %}
+      <li class="event-item">
+        <div>
+          <strong>{{ e.title }}</strong>
+          <div style="opacity:.8;">
+            {{ e.date.strftime('%Y-%m-%d') }}
+            {% if e.description %} • {{ e.description|truncate(120) }}{% endif %}
+            {% if e.capacity is defined and e.capacity is not none %} • Capacity: {{ e.capacity }}{% endif %}
+          </div>
+        </div>
+        <div class="event-actions">
+          <a class="btn" href="{{ url_for('edit_event', event_id=e.id) }}">Edit</a>
+          <form method="POST" action="{{ url_for('delete_event', event_id=e.id) }}" onsubmit="return confirm('Delete this event?');" style="display:inline;">
+            <button class="btn btn-danger" type="submit">Delete</button>
+          </form>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No events created yet.</p>
+{% endif %}
+
+<style>
+.event-list { list-style: none; padding: 0; margin: 0.5rem 0 2rem; }
+.event-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.75rem 1rem; border: 1px solid rgba(0,0,0,.1); border-radius: 10px; margin-bottom: 0.75rem;
+  background: rgba(255,255,255,.6);
+}
+.event-actions .btn { margin-left: 0.4rem; }
+.btn { padding: .45rem .8rem; border-radius: 8px; text-decoration: none; background: #e9e9ff; border: none; cursor: pointer; }
+.btn:hover { background: #d7d7ff; }
+.btn-danger { background: #ffebee; }
+.btn-danger:hover { background: #ffd2d8; }
+</style>
+
+{% endblock %}

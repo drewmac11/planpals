@@ -1,3 +1,5 @@
+from flask_login import login_required, current_user
+from flask import render_template, request, redirect, url_for, flash
 from flask import Flask, render_template, request, redirect, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
@@ -134,3 +136,75 @@ if __name__ == "__main__":
     app = create_app()
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
+
+
+@app.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    # Update display name
+    if request.method == "POST":
+        new_name = request.form.get("name", "").strip()
+        if new_name:
+            current_user.name = new_name
+            db.session.commit()
+            flash("Your name has been updated.", "success")
+            return redirect(url_for("profile"))
+        else:
+            flash("Name cannot be empty.", "warning")
+
+    # Show only the events created by this user
+    events = Event.query.filter_by(creator_id=current_user.id).order_by(Event.date.desc()).all()
+    return render_template("profile.html", events=events)
+
+@app.route("/event/<int:event_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_event(event_id):
+    event = Event.query.get_or_404(event_id)
+    if event.creator_id != current_user.id:
+        flash("You can only edit your own events.", "danger")
+        return redirect(url_for("profile"))
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        date_str = request.form.get("date", "").strip()
+        description = request.form.get("description", "").strip()
+
+        if not title or not date_str:
+            flash("Title and date are required.", "warning")
+            return redirect(url_for("edit_event", event_id=event.id))
+
+        try:
+            event.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            flash("Invalid date format.", "danger")
+            return redirect(url_for("edit_event", event_id=event.id))
+
+        event.title = title
+        event.description = description
+
+        if hasattr(event, "capacity"):
+            cap = request.form.get("capacity", "").strip()
+            if cap:
+                try:
+                    event.capacity = int(cap)
+                except ValueError:
+                    flash("Capacity must be a number.", "warning")
+
+        db.session.commit()
+        flash("Event updated.", "success")
+        return redirect(url_for("profile"))
+
+    return render_template("edit_event.html", event=event)
+
+@app.route("/event/<int:event_id>/delete", methods=["POST"])
+@login_required
+def delete_event(event_id):
+    event = Event.query.get_or_404(event_id)
+    if event.creator_id != current_user.id:
+        flash("You can only delete your own events.", "danger")
+        return redirect(url_for("profile"))
+
+    db.session.delete(event)
+    db.session.commit()
+    flash("Event deleted.", "success")
+    return redirect(url_for("profile"))
